@@ -52,6 +52,7 @@ async function initDatabase() {
                     description TEXT,
                     price REAL NOT NULL,
                     stock INTEGER DEFAULT 0,
+                    sold_count INTEGER DEFAULT 0,
                     status TEXT DEFAULT 'in_stock',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -89,8 +90,10 @@ async function initDatabase() {
             db.run(`
                 CREATE TABLE IF NOT EXISTS orders (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
+                    user_id INTEGER DEFAULT 0,
+                    buyer_email TEXT,
                     product_id INTEGER NOT NULL,
+                    quantity INTEGER DEFAULT 1,
                     amount REAL NOT NULL,
                     payment_method TEXT NOT NULL,
                     payment_status TEXT DEFAULT 'pending',
@@ -98,7 +101,6 @@ async function initDatabase() {
                     card_id INTEGER,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     paid_at DATETIME,
-                    FOREIGN KEY (user_id) REFERENCES users(id),
                     FOREIGN KEY (product_id) REFERENCES products(id),
                     FOREIGN KEY (card_id) REFERENCES cards(id)
                 )
@@ -108,8 +110,23 @@ async function initDatabase() {
                     reject(err);
                 } else {
                     console.log('✅ 订单表创建成功');
-                    await insertDefaultData();
-                    resolve();
+                    // 5. 阶梯定价表
+                    db.run(`
+                        CREATE TABLE IF NOT EXISTS price_tiers (
+                            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                            product_id  INTEGER NOT NULL,
+                            min_qty     INTEGER NOT NULL,
+                            max_qty     INTEGER,
+                            price       REAL NOT NULL,
+                            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                        )
+                    `, async (err2) => {
+                        if (err2) console.error('❌ 创建阶梯定价表失败:', err2.message);
+                        else console.log('✅ 阶梯定价表创建成功');
+                        await insertDefaultData();
+                        resolve();
+                    });
                 }
             });
         });
@@ -124,22 +141,25 @@ async function insertDefaultData() {
     // 创建管理员账号
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-    db.run(
-        'INSERT OR IGNORE INTO users (email, password, is_admin) VALUES (?, ?, 1)',
-        [adminEmail, hashedPassword],
-        function(err) {
-            if (err) {
-                console.error('❌ 创建管理员账号失败:', err.message);
-            } else if (this.changes > 0) {
-                console.log('✅ 管理员账号创建成功');
-                console.log(`   邮箱: ${adminEmail}`);
-                console.log(`   密码: ${adminPassword}`);
-                console.log('   ⚠️  请立即修改默认密码！');
-            } else {
-                console.log('ℹ️  管理员账号已存在');
+    await new Promise((resolve) => {
+        db.run(
+            'INSERT OR IGNORE INTO users (email, password, is_admin) VALUES (?, ?, 1)',
+            [adminEmail, hashedPassword],
+            function(err) {
+                if (err) {
+                    console.error('❌ 创建管理员账号失败:', err.message);
+                } else if (this.changes > 0) {
+                    console.log('✅ 管理员账号创建成功');
+                    console.log(`   邮箱: ${adminEmail}`);
+                    console.log(`   密码: ${adminPassword}`);
+                    console.log('   ⚠️  请立即修改默认密码！');
+                } else {
+                    console.log('ℹ️  管理员账号已存在');
+                }
+                resolve();
             }
-        }
-    );
+        );
+    });
 
     // 插入示例商品
     const sampleProducts = [
@@ -163,30 +183,36 @@ async function insertDefaultData() {
         }
     ];
 
-    db.get('SELECT COUNT(*) as count FROM products', (err, row) => {
-        if (err) {
-            console.error('❌ 查询商品失败:', err.message);
-            return;
-        }
+    const row = await new Promise((resolve) => {
+        db.get('SELECT COUNT(*) as count FROM products', (err, row) => {
+            if (err) {
+                console.error('❌ 查询商品失败:', err.message);
+                resolve({ count: -1 });
+            } else {
+                resolve(row);
+            }
+        });
+    });
 
-        if (row.count === 0) {
-            const stmt = db.prepare('INSERT INTO products (name, description, price, stock, status) VALUES (?, ?, ?, ?, ?)');
-            sampleProducts.forEach(product => {
+    if (row.count === 0) {
+        const stmt = db.prepare('INSERT INTO products (name, description, price, stock, status) VALUES (?, ?, ?, ?, ?)');
+        for (const product of sampleProducts) {
+            await new Promise((resolve) => {
                 stmt.run(
                     product.name,
                     product.description,
                     product.price,
                     product.stock,
-                    product.stock > 0 ? 'in_stock' : 'out_of_stock'
+                    product.stock > 0 ? 'in_stock' : 'out_of_stock',
+                    resolve
                 );
             });
-            stmt.finalize(() => {
-                console.log('✅ 示例商品数据插入成功');
-            });
-        } else {
-            console.log('ℹ️  商品数据已存在，跳过插入');
         }
-    });
+        await new Promise((resolve) => stmt.finalize(resolve));
+        console.log('✅ 示例商品数据插入成功');
+    } else {
+        console.log('ℹ️  商品数据已存在，跳过插入');
+    }
 }
 
 // 执行初始化

@@ -15,6 +15,7 @@ router.get('/', async (req, res) => {
                 p.description,
                 p.price,
                 p.stock,
+                p.sold_count,
                 p.status,
                 COUNT(c.id) as available_cards
             FROM products p
@@ -45,7 +46,7 @@ router.get('/', async (req, res) => {
 });
 
 // ============================================
-// 获取单个商品详情
+// 获取单个商品详情（含阶梯定价）
 // ============================================
 router.get('/:id', async (req, res) => {
     try {
@@ -64,6 +65,22 @@ router.get('/:id', async (req, res) => {
         if (!product) {
             return res.status(404).json({ error: '商品不存在' });
         }
+
+        // 同步库存状态
+        const newStatus = product.available_cards > 0 ? 'in_stock' : 'out_of_stock';
+        if (product.status !== newStatus) {
+            await dbRun('UPDATE products SET status = ?, stock = ? WHERE id = ?',
+                [newStatus, product.available_cards, id]);
+            product.status = newStatus;
+            product.stock = product.available_cards;
+        }
+
+        // 查询阶梯定价
+        const tiers = await dbAll(
+            'SELECT * FROM price_tiers WHERE product_id = ? ORDER BY min_qty ASC',
+            [id]
+        );
+        product.tiers = tiers;
 
         res.json(product);
     } catch (error) {

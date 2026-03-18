@@ -2,23 +2,46 @@ const express = require('express');
 const { dbGet, dbAll, dbRun } = require('../utils/database');
 const { authenticateToken } = require('../middleware/auth');
 const { createAlipayOrder, createWechatOrder } = require('../utils/payment');
+const { sendCardEmail } = require('../utils/email');
 
 const router = express.Router();
 
 // ============================================
-// 创建订单并发起支付
+// 工具：根据数量计算阶梯单价
 // ============================================
-router.post('/create', authenticateToken, async (req, res) => {
-    try {
-        const { productId, paymentMethod } = req.body;
-        const userId = req.user.userId;
+async function calcUnitPrice(productId, basePrice, quantity) {
+    const tiers = await dbAll(
+        'SELECT * FROM price_tiers WHERE product_id = ? ORDER BY min_qty ASC',
+        [productId]
+    );
+    if (!tiers.length) return basePrice;
 
-        // 验证支付方式
+    // 找到匹配的档位（max_qty 为 NULL 表示"及以上"）
+    for (let i = tiers.length - 1; i >= 0; i--) {
+        const t = tiers[i];
+        if (quantity >= t.min_qty && (t.max_qty === null || quantity <= t.max_qty)) {
+            return t.price;
+        }
+    }
+    return basePrice;
+}
+
+// ============================================
+// 游客下单（无需登录，填邮箱即可）
+// ============================================
+router.post('/guest-create', async (req, res) => {
+    try {
+        const { productId, quantity = 1, email, paymentMethod } = req.body;
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: '请填写正确的邮箱地址' });
+        }
         if (!['alipay', 'wechat'].includes(paymentMethod)) {
             return res.status(400).json({ error: '不支持的支付方式' });
         }
+        const qty = Math.max(1, parseInt(quantity) || 1);
 
-        // 查询商品信息
+        // 查询商品
         const product = await dbGet(`
             SELECT p.*, COUNT(c.id) as available_cards
             FROM products p
@@ -27,51 +50,92 @@ router.post('/create', authenticateToken, async (req, res) => {
             GROUP BY p.id
         `, [productId]);
 
-        if (!product) {
-            return res.status(404).json({ error: '商品不存在' });
+        if (!product) return res.status(404).json({ error: '商品不存在' });
+        if (product.available_cards < qty) {
+            return res.status(400).json({ error: `库存不足，当前仅剩 ${product.available_cards} 件` });
         }
 
-        if (product.available_cards === 0) {
-            return res.status(400).json({ error: '商品已售罄' });
-        }
+        // 计算阶梯价格
+        const unitPrice = await calcUnitPrice(productId, product.price, qty);
+        const totalAmount = parseFloat((unitPrice * qty).toFixed(2));
 
         // 创建订单
         const orderResult = await dbRun(`
-            INSERT INTO orders (user_id, product_id, amount, payment_method, payment_status)
-            VALUES (?, ?, ?, ?, 'pending')
-        `, [userId, productId, product.price, paymentMethod]);
+            INSERT INTO orders (user_id, buyer_email, product_id, quantity, amount, payment_method, payment_status)
+            VALUES (0, ?, ?, ?, ?, ?, 'pending')
+        `, [email, productId, qty, totalAmount, paymentMethod]);
 
         const orderId = orderResult.id;
-
-        // 生成订单号
         const orderNo = `ORD${Date.now()}${orderId}`;
-
-        // 更新订单号
         await dbRun('UPDATE orders SET transaction_id = ? WHERE id = ?', [orderNo, orderId]);
 
-        // 创建支付
-        let paymentInfo;
+        // 发起支付
         const orderInfo = {
             orderId: orderNo,
-            amount: product.price,
+            amount: totalAmount,
             subject: product.name,
-            description: product.description || product.name
+            description: `${product.name} x${qty}`
         };
+        const paymentInfo = paymentMethod === 'alipay'
+            ? await createAlipayOrder(orderInfo)
+            : await createWechatOrder(orderInfo);
 
-        if (paymentMethod === 'alipay') {
-            paymentInfo = await createAlipayOrder(orderInfo);
-        } else {
-            paymentInfo = await createWechatOrder(orderInfo);
+        res.json({ orderId, orderNo, amount: totalAmount, unitPrice, quantity: qty, productName: product.name, paymentMethod, paymentInfo });
+    } catch (error) {
+        console.error('游客下单错误:', error);
+        res.status(500).json({ error: '创建订单失败，请稍后重试' });
+    }
+});
+
+// ============================================
+// 创建订单并发起支付（登录用户）
+// ============================================
+router.post('/create', authenticateToken, async (req, res) => {
+    try {
+        const { productId, quantity = 1, paymentMethod } = req.body;
+        const userId = req.user.userId;
+        const qty = Math.max(1, parseInt(quantity) || 1);
+
+        if (!['alipay', 'wechat'].includes(paymentMethod)) {
+            return res.status(400).json({ error: '不支持的支付方式' });
         }
 
-        res.json({
-            orderId,
-            orderNo,
-            amount: product.price,
-            productName: product.name,
-            paymentMethod,
-            paymentInfo
-        });
+        const product = await dbGet(`
+            SELECT p.*, COUNT(c.id) as available_cards
+            FROM products p
+            LEFT JOIN cards c ON p.id = c.product_id AND c.status = 'available'
+            WHERE p.id = ?
+            GROUP BY p.id
+        `, [productId]);
+
+        if (!product) return res.status(404).json({ error: '商品不存在' });
+        if (product.available_cards < qty) {
+            return res.status(400).json({ error: `库存不足，当前仅剩 ${product.available_cards} 件` });
+        }
+
+        const unitPrice = await calcUnitPrice(productId, product.price, qty);
+        const totalAmount = parseFloat((unitPrice * qty).toFixed(2));
+
+        const orderResult = await dbRun(`
+            INSERT INTO orders (user_id, product_id, quantity, amount, payment_method, payment_status)
+            VALUES (?, ?, ?, ?, ?, 'pending')
+        `, [userId, productId, qty, totalAmount, paymentMethod]);
+
+        const orderId = orderResult.id;
+        const orderNo = `ORD${Date.now()}${orderId}`;
+        await dbRun('UPDATE orders SET transaction_id = ? WHERE id = ?', [orderNo, orderId]);
+
+        const orderInfo = {
+            orderId: orderNo,
+            amount: totalAmount,
+            subject: product.name,
+            description: `${product.name} x${qty}`
+        };
+        const paymentInfo = paymentMethod === 'alipay'
+            ? await createAlipayOrder(orderInfo)
+            : await createWechatOrder(orderInfo);
+
+        res.json({ orderId, orderNo, amount: totalAmount, unitPrice, quantity: qty, productName: product.name, paymentMethod, paymentInfo });
     } catch (error) {
         console.error('创建订单错误:', error);
         res.status(500).json({ error: '创建订单失败，请稍后重试' });
@@ -172,43 +236,72 @@ router.get('/test-pay/:orderNo', async (req, res) => {
 });
 
 // ============================================
-// 处理支付成功（自动发卡）
+// 处理支付成功（自动发卡 + 邮件通知）
 // ============================================
 async function processPaymentSuccess(orderId, transactionId) {
     try {
-        // 查询订单
-        const order = await dbGet('SELECT * FROM orders WHERE id = ?', [orderId]);
+        // 查询订单（含用户邮箱）
+        const order = await dbGet(`
+            SELECT o.*, u.email as user_email, p.name as product_name
+            FROM orders o
+            JOIN products p ON o.product_id = p.id
+            LEFT JOIN users u ON o.user_id = u.id
+            WHERE o.id = ?
+        `, [orderId]);
+
         if (!order || order.payment_status === 'paid') {
             return;
         }
 
-        // 查找可用卡密
-        const card = await dbGet(`
+        const quantity = order.quantity || 1;
+
+        // 查找足够数量的可用卡密
+        const cards = await dbAll(`
             SELECT * FROM cards
             WHERE product_id = ? AND status = 'available'
-            LIMIT 1
-        `, [order.product_id]);
+            LIMIT ?
+        `, [order.product_id, quantity]);
 
-        if (!card) {
-            console.error('❌ 库存不足，无法发卡');
+        if (cards.length < quantity) {
+            console.error(`❌ 库存不足，需要 ${quantity} 张，仅剩 ${cards.length} 张`);
             return;
         }
 
-        // 更新订单状态
+        // 更新订单状态（card_id 记录第一张卡，其余通过 order_id 关联）
         await dbRun(`
             UPDATE orders
             SET payment_status = 'paid', card_id = ?, paid_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        `, [card.id, orderId]);
+        `, [cards[0].id, orderId]);
 
-        // 更新卡密状态
-        await dbRun(`
-            UPDATE cards
-            SET status = 'sold', order_id = ?, sold_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `, [orderId, card.id]);
+        // 批量更新卡密状态
+        for (const card of cards) {
+            await dbRun(`
+                UPDATE cards
+                SET status = 'sold', order_id = ?, sold_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [orderId, card.id]);
+        }
 
-        console.log(`✅ 订单 ${orderId} 支付成功，已自动发卡`);
+        // 更新商品已售数量
+        await dbRun(
+            'UPDATE products SET sold_count = sold_count + ? WHERE id = ?',
+            [cards.length, order.product_id]
+        );
+
+        console.log(`✅ 订单 ${orderId} 支付成功，已自动发卡 ${cards.length} 张`);
+
+        // 发送卡密邮件（不阻塞主流程）
+        const emailTo = order.user_email || order.buyer_email;
+        if (emailTo) {
+            sendCardEmail({
+                toEmail: emailTo,
+                productName: order.product_name,
+                cards,
+                orderNo: transactionId,
+                amount: order.amount,
+            }).catch(err => console.error('❌ 邮件发送失败:', err.message));
+        }
     } catch (error) {
         console.error('处理支付成功失败:', error);
     }

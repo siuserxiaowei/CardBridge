@@ -51,6 +51,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
+// 商品详情页（SEO 友好的独立路由）
+app.get('/product/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'product.html'));
+});
+
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
