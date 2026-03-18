@@ -113,7 +113,7 @@ async function loadProducts() {
         }
 
         grid.innerHTML = products.map(product => `
-            <article class="product-card">
+            <article class="product-card" onclick="location.href='/product/${product.id}'" style="cursor:pointer;">
                 <div class="card-content">
                     <div class="card-header">
                         <h3 class="card-title">${escapeHtml(product.name)}</h3>
@@ -129,9 +129,10 @@ async function loadProducts() {
                                 <span class="stock-dot"></span>
                                 库存 ${product.stock} 件
                             </span>
+                            <span style="font-size:0.78rem;color:#475569;margin-top:2px;">已售 ${product.sold_count || 0} 件</span>
                         </div>
                         <button class="btn-buy"
-                            onclick="handleBuyClick(${product.id}, '${escapeHtml(product.name)}', ${product.price})"
+                            onclick="event.stopPropagation(); location.href='/product/${product.id}'"
                             ${product.status !== 'in_stock' ? 'disabled' : ''}>
                             ${product.status === 'in_stock' ? '立即购买' : '暂无库存'}
                         </button>

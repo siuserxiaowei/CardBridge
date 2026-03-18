@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品详情 - 数字商店</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #1a0f0a 0%, #0f0a08 100%);
+            color: #fef2f2;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* 导航 */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(26, 15, 10, 0.9);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(249, 115, 22, 0.15);
+            padding: 1.25rem 0;
+        }
+        .navbar-container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #f97316; }
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f97316, #dc2626);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        /* 主体 */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem 5rem;
+        }
+
+        /* 商品主卡 */
+        .product-card {
+            background: linear-gradient(135deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%);
+            border: 1px solid rgba(148,163,184,0.12);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* 标题区 */
+        .product-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .product-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            line-height: 1.3;
+            flex: 1;
+        }
+        .status-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-in_stock {
+            background: rgba(34,197,94,0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.3);
+        }
+        .badge-out_of_stock {
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+
+        /* 统计三格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-box {
+            background: rgba(15,23,42,0.6);
+            border: 1px solid rgba(148,163,184,0.1);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        .stat-value.price { color: #34d399; }
+        .stat-value.sold  { color: #94a3b8; }
+        .stat-value.stock { color: #fb923c; }
+
+        /* 阶梯定价 */
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .tiers-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        .tiers-table thead tr {
+            background: rgba(249,115,22,0.12);
+        }
+        .tiers-table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.8rem;
+            color: #fb923c;
+            font-weight: 600;
+        }
+        .tiers-table tbody tr {
+            border-top: 1px solid rgba(148,163,184,0.08);
+            transition: background 0.2s;
+        }
+        .tiers-table tbody tr:hover { background: rgba(249,115,22,0.05); }
+        .tiers-table tbody tr.active-tier { background: rgba(249,115,22,0.1); }
+        .tiers-table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+        .tier-price { color: #34d399; font-weight: 700; }
+        .tier-discount { color: #fb923c; font-size: 0.8rem; }
+        .tier-hint {
+            font-size: 0.78rem;
+            color: #475569;
+            margin-top: 0.4rem;
+        }
+
+        /* 商品描述 */
+        .description {
+            background: rgba(15,23,42,0.5);
+            border: 1px solid rgba(148,163,184,0.08);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            color: #94a3b8;
+            font-size: 0.92rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* 购买表单卡 */
+        .buy-card {
+            background: linear-gradient(135deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%);
+            border: 1px solid rgba(249,115,22,0.2);
+            border-radius: 20px;
+            padding: 2rem;
+        }
+        .buy-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: rgba(15,23,42,0.8);
+            border: 1px solid rgba(148,163,184,0.2);
+            border-radius: 10px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
+        }
+        .qty-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .total-display {
+            background: rgba(249,115,22,0.08);
+            border: 1px solid rgba(249,115,22,0.2);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .total-label { font-size: 0.875rem; color: #94a3b8; }
+        .total-value { font-size: 1.4rem; font-weight: 800; color: #fb923c; }
+
+        /* 支付方式 */
+        .pay-methods {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .pay-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 0.9rem;
+            border: 2px solid rgba(148,163,184,0.15);
+            border-radius: 12px;
+            background: rgba(15,23,42,0.6);
+            color: #cbd5e1;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .pay-btn:hover:not(:disabled) {
+            border-color: #f97316;
+            background: rgba(249,115,22,0.1);
+            color: #fb923c;
+            transform: translateY(-2px);
+        }
+        .pay-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .pay-icon { font-size: 1.4rem; }
+
+        /* 提示 */
+        .info-tip {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            background: rgba(251,191,36,0.08);
+            border-left: 3px solid #f59e0b;
+            border-radius: 0 8px 8px 0;
+            padding: 0.9rem 1rem;
+            margin-top: 1.25rem;
+            font-size: 0.82rem;
+            color: #94a3b8;
+        }
+        .info-tip span { color: #fbbf24; flex-shrink: 0; }
+
+        /* 加载/错误 */
+        .loading-state {
+            text-align: center;
+            padding: 5rem 2rem;
+            color: #64748b;
+        }
+        .loading-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(249,115,22,0.2);
+            border-top-color: #f97316;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 分割线 */
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(148,163,184,0.08);
+            margin: 1.75rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .product-title { font-size: 1.3rem; }
+            .stats-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+            .qty-row { grid-template-columns: 1fr; }
+            .pay-methods { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="/" class="back-link">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            返回商品列表
+        </a>
+        <a href="/" class="logo">⚡ 数字商店</a>
+    </div>
+</nav>
+
+<div class="container" id="app">
+    <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <div>加载中...</div>
+    </div>
+</div>
+
+<script>
+const API = window.location.origin + '/api';
+const productId = location.pathname.split('/product/')[1]?.replace(/\/$/, '');
+
+let product = null;
+
+// ============================================
+// 计算阶梯单价
+// ============================================
+function getUnitPrice(qty) {
+    if (!product.tiers || !product.tiers.length) return product.price;
+    for (let i = product.tiers.length - 1; i >= 0; i--) {
+        const t = product.tiers[i];
+        if (qty >= t.min_qty && (t.max_qty === null || qty <= t.max_qty)) {
+            return t.price;
+        }
+    }
+    return product.price;
+}
+
+// ============================================
+// 加载商品详情
+// ============================================
+async function loadProduct() {
+    try {
+        const res = await fetch(`${API}/products/${productId}`);
+        if (!res.ok) throw new Error('商品不存在');
+        product = await res.json();
+
+        document.title = `${product.name} - 数字商店`;
+        renderPage();
+    } catch (e) {
+        document.getElementById('app').innerHTML = `
+            <div class="loading-state">
+                <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
+                <div style="color:#e2e8f0;font-size:1.1rem;margin-bottom:0.5rem;">商品不存在或已下架</div>
+                <a href="/" style="color:#f97316;text-decoration:none;">← 返回首页</a>
+            </div>`;
+    }
+}
+
+// ============================================
+// 渲染页面
+// ============================================
+function renderPage() {
+    const inStock = product.status === 'in_stock';
+    const maxQty = product.stock || product.available_cards || 0;
+
+    // 阶梯定价 HTML
+    let tiersHtml = '';
+    if (product.tiers && product.tiers.length > 0) {
+        const rows = product.tiers.map(t => {
+            const qtyRange = t.max_qty ? `${t.min_qty} - ${t.max_qty} 件` : `${t.min_qty}+ 件`;
+            const discount = t.price < product.price
+                ? `<span class="tier-discount">${Math.round(t.price / product.price * 10)}折</span>`
+                : `<span style="color:#475569">原价</span>`;
+            return `<tr data-min="${t.min_qty}" data-max="${t.max_qty ?? 99999}" data-price="${t.price}">
+                <td>${qtyRange}</td>
+                <td class="tier-price">¥${parseFloat(t.price).toFixed(2)}<span style="font-size:0.75rem;color:#64748b"> / 件</span></td>
+                <td>${discount}</td>
+            </tr>`;
+        }).join('');
+        tiersHtml = `
+        <hr class="divider">
+        <p class="section-title">📊 阶梯优惠</p>
+        <table class="tiers-table">
+            <thead><tr><th>购买数量</th><th>单价</th><th>优惠</th></tr></thead>
+            <tbody id="tiersBody">${rows}</tbody>
+        </table>
+        <p class="tier-hint">📌 购买越多，单价越低，总价自动更新</p>`;
+    }
+
+    document.getElementById('app').innerHTML = `
+        <!-- 商品主卡 -->
+        <div class="product-card">
+            <div class="product-header">
+                <h1 class="product-title">${escHtml(product.name)}</h1>
+                <span class="status-badge badge-${product.status}">${inStock ? '✓ 有货' : '× 售罄'}</span>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">单价</div>
+                    <div class="stat-value price" id="displayPrice">¥${parseFloat(product.price).toFixed(2)}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">已售</div>
+                    <div class="stat-value sold">${product.sold_count || 0} <small style="font-size:0.9rem">件</small></div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">库存</div>
+                    <div class="stat-value stock">${maxQty} <small style="font-size:0.9rem">件</small></div>
+                </div>
+            </div>
+
+            ${tiersHtml}
+
+            <hr class="divider">
+            <p class="section-title">📄 商品描述</p>
+            <div class="description">${escHtml(product.description || '暂无描述')}</div>
+        </div>
+
+        <!-- 购买区 -->
+        <div class="buy-card">
+            <div class="buy-title">🛒 立即购买</div>
+
+            <div class="form-group">
+                <label class="form-label" for="buyerEmail">接收卡密的邮箱地址 *</label>
+                <input class="form-input" type="email" id="buyerEmail"
+                    placeholder="your@email.com" required autocomplete="email">
+            </div>
+
+            <div class="qty-row">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" for="buyQty">购买数量</label>
+                    <input class="form-input" type="number" id="buyQty"
+                        min="1" max="${maxQty}" value="1"
+                        oninput="updateTotal()" ${!inStock ? 'disabled' : ''}>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">应付金额</label>
+                    <div class="total-display">
+                        <span class="total-label">合计</span>
+                        <span class="total-value" id="totalPrice">¥${parseFloat(product.price).toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pay-methods">
+                <button class="pay-btn" onclick="submitOrder('alipay')" id="btnAlipay" ${!inStock ? 'disabled' : ''}>
+                    <span class="pay-icon">💳</span> 支付宝支付
+                </button>
+                <button class="pay-btn" onclick="submitOrder('wechat')" id="btnWechat" ${!inStock ? 'disabled' : ''}>
+                    <span class="pay-icon">💚</span> 微信支付
+                </button>
+            </div>
+
+            <div class="info-tip">
+                <span>📧</span>
+                付款成功后，卡密将 <strong style="color:#fbbf24">自动发送到您填写的邮箱</strong>，请确保邮箱地址填写正确。
+            </div>
+        </div>
+    `;
+
+    updateTotal();
+    highlightTier(1);
+}
+
+// ============================================
+// 更新总价 + 高亮对应档位
+// ============================================
+function updateTotal() {
+    const qty = parseInt(document.getElementById('buyQty')?.value) || 1;
+    const unitPrice = getUnitPrice(qty);
+    const total = (unitPrice * qty).toFixed(2);
+    const priceEl = document.getElementById('displayPrice');
+    const totalEl = document.getElementById('totalPrice');
+    if (priceEl) priceEl.textContent = `¥${parseFloat(unitPrice).toFixed(2)}`;
+    if (totalEl) totalEl.textContent = `¥${total}`;
+    highlightTier(qty);
+}
+
+function highlightTier(qty) {
+    document.querySelectorAll('#tiersBody tr').forEach(row => {
+        const min = parseInt(row.dataset.min);
+        const max = parseInt(row.dataset.max);
+        row.classList.toggle('active-tier', qty >= min && qty <= max);
+    });
+}
+
+// ============================================
+// 提交订单（游客模式）
+// ============================================
+async function submitOrder(paymentMethod) {
+    const email = document.getElementById('buyerEmail')?.value?.trim();
+    const qty = parseInt(document.getElementById('buyQty')?.value) || 1;
+
+    if (!email) {
+        alert('请填写邮箱地址，卡密将发送到该邮箱');
+        document.getElementById('buyerEmail').focus();
+        return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert('邮箱格式不正确，请重新填写');
+        return;
+    }
+
+    // 锁定按钮防重复提交
+    ['btnAlipay', 'btnWechat'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) { btn.disabled = true; btn.textContent = '处理中...'; }
+    });
+
+    try {
+        const res = await fetch(`${API}/orders/guest-create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId: product.id, quantity: qty, email, paymentMethod })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || '下单失败，请稍后重试');
+            return;
+        }
+
+        // 跳转支付
+        if (data.paymentInfo?.isTestMode) {
+            if (confirm(`测试模式\n商品：${data.productName}\n数量：${data.quantity} 件\n金额：¥${data.amount}\n\n点击确定模拟支付成功，卡密将发送到 ${email}`)) {
+                window.location.href = data.paymentInfo.payUrl;
+            }
+        } else {
+            window.location.href = data.paymentInfo.payUrl || data.paymentInfo.codeUrl;
+        }
+    } catch (e) {
+        console.error(e);
+        alert('网络错误，请稍后重试');
+    } finally {
+        renderPage(); // 重置按钮
+    }
+}
+
+// ============================================
+// XSS 防护
+// ============================================
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+
+loadProduct();
+</script>
+
+</body>
+</html>
