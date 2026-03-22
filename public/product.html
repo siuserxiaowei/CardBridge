@@ -5,340 +5,576 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>商品详情 - 数字商店</title>
     <style>
+        :root {
+            --bg: #0b0d10;
+            --panel: rgba(17, 21, 27, 0.94);
+            --panel-soft: rgba(255, 255, 255, 0.03);
+            --panel-muted: #0f1318;
+            --line: rgba(180, 192, 205, 0.14);
+            --line-strong: rgba(220, 231, 243, 0.22);
+            --text: #eef4fb;
+            --text-soft: #b6c2cf;
+            --text-dim: #728092;
+            --accent: #c7ff6b;
+            --accent-soft: rgba(199, 255, 107, 0.12);
+            --success: #79f2aa;
+            --danger: #ff857f;
+            --warn: #ffd86a;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+            --radius: 26px;
+            --radius-sm: 18px;
+            --max-width: 1120px;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background: linear-gradient(135deg, #1a0f0a 0%, #0f0a08 100%);
-            color: #fef2f2;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
             min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(199, 255, 107, 0.07), transparent 26%),
+                radial-gradient(circle at 85% 14%, rgba(125, 211, 252, 0.07), transparent 24%),
+                linear-gradient(180deg, #090b0e 0%, #0d1014 45%, #090b0e 100%);
+            color: var(--text);
+            font-family: "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono", "Fira Code", "Menlo", "Monaco", "Consolas", monospace;
+            line-height: 1.7;
         }
 
-        /* 导航 */
-        .navbar {
+        a { color: inherit; text-decoration: none; }
+        button, input { font: inherit; }
+
+        .site-header {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(26, 15, 10, 0.9);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(249, 115, 22, 0.15);
-            padding: 1.25rem 0;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            background: rgba(9, 11, 14, 0.72);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .navbar-container {
-            max-width: 960px;
+
+        .site-header-inner {
+            width: min(calc(100% - 32px), var(--max-width));
             margin: 0 auto;
-            padding: 0 2rem;
+            min-height: 76px;
             display: flex;
             align-items: center;
-            gap: 1rem;
-        }
-        .back-link {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-        }
-        .back-link:hover { color: #f97316; }
-        .logo {
-            font-size: 1.25rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #f97316, #dc2626);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-decoration: none;
-        }
-
-        /* 主体 */
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 2.5rem 2rem 5rem;
-        }
-
-        /* 商品主卡 */
-        .product-card {
-            background: linear-gradient(135deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%);
-            border: 1px solid rgba(148,163,184,0.12);
-            border-radius: 20px;
-            padding: 2.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        /* 标题区 */
-        .product-header {
-            display: flex;
-            align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        .product-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #e2e8f0;
-            line-height: 1.3;
-            flex: 1;
-        }
-        .status-badge {
-            padding: 0.4rem 1rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .badge-in_stock {
-            background: rgba(34,197,94,0.15);
-            color: #22c55e;
-            border: 1px solid rgba(34,197,94,0.3);
-        }
-        .badge-out_of_stock {
-            background: rgba(239,68,68,0.15);
-            color: #f87171;
-            border: 1px solid rgba(239,68,68,0.3);
         }
 
-        /* 统计三格 */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--text-soft);
+            font-size: 0.82rem;
+            padding: 0.7rem 0.95rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            transition: 0.22s ease;
         }
-        .stat-box {
-            background: rgba(15,23,42,0.6);
-            border: 1px solid rgba(148,163,184,0.1);
-            border-radius: 12px;
-            padding: 1.25rem;
-        }
-        .stat-label {
-            font-size: 0.8rem;
-            color: #64748b;
-            margin-bottom: 0.5rem;
-        }
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 700;
-        }
-        .stat-value.price { color: #34d399; }
-        .stat-value.sold  { color: #94a3b8; }
-        .stat-value.stock { color: #fb923c; }
 
-        /* 阶梯定价 */
-        .section-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #94a3b8;
-            margin-bottom: 0.75rem;
+        .back-link:hover {
+            color: var(--text);
+            border-color: var(--line);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .logo {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-        .tiers-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-        .tiers-table thead tr {
-            background: rgba(249,115,22,0.12);
-        }
-        .tiers-table th {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            font-size: 0.8rem;
-            color: #fb923c;
-            font-weight: 600;
-        }
-        .tiers-table tbody tr {
-            border-top: 1px solid rgba(148,163,184,0.08);
-            transition: background 0.2s;
-        }
-        .tiers-table tbody tr:hover { background: rgba(249,115,22,0.05); }
-        .tiers-table tbody tr.active-tier { background: rgba(249,115,22,0.1); }
-        .tiers-table td {
-            padding: 0.75rem 1rem;
-            font-size: 0.9rem;
-            color: #cbd5e1;
-        }
-        .tier-price { color: #34d399; font-weight: 700; }
-        .tier-discount { color: #fb923c; font-size: 0.8rem; }
-        .tier-hint {
-            font-size: 0.78rem;
-            color: #475569;
-            margin-top: 0.4rem;
+            gap: 0.8rem;
         }
 
-        /* 商品描述 */
+        .logo-mark {
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(180deg, rgba(199, 255, 107, 0.16), rgba(199, 255, 107, 0.04));
+            color: var(--accent);
+        }
+
+        .logo-text {
+            font-size: 0.94rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .page-shell {
+            width: min(calc(100% - 32px), var(--max-width));
+            margin: 0 auto;
+            padding: 2.4rem 0 4rem;
+        }
+
+        .terminal-window {
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(18, 22, 28, 0.95), rgba(10, 13, 18, 0.98));
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .window-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.95rem 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .window-dot {
+            width: 0.68rem;
+            height: 0.68rem;
+            border-radius: 999px;
+        }
+
+        .window-dot:nth-child(1) { background: #ff6e68; }
+        .window-dot:nth-child(2) { background: #ffd86a; }
+        .window-dot:nth-child(3) { background: #68f29a; }
+
+        .window-title {
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .intro-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .summary-panel {
+            padding: 1.6rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .summary-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: fit-content;
+            padding: 0.46rem 0.78rem;
+            border-radius: 999px;
+            border: 1px solid rgba(199, 255, 107, 0.18);
+            background: rgba(199, 255, 107, 0.08);
+            color: var(--accent);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .summary-title {
+            font-size: clamp(2rem, 4.8vw, 3.7rem);
+            line-height: 1.02;
+            letter-spacing: -0.06em;
+            max-width: 11ch;
+        }
+
+        .summary-note {
+            color: var(--text-soft);
+            max-width: 36rem;
+        }
+
+        .summary-meta {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+        }
+
+        .meta-card {
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .meta-label {
+            color: var(--text-dim);
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .meta-value {
+            margin-top: 0.45rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .loading-state {
+            padding: 4rem 1.5rem;
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        .loading-spinner {
+            width: 42px;
+            height: 42px;
+            margin: 0 auto 1rem;
+            border-radius: 999px;
+            border: 3px solid rgba(199, 255, 107, 0.12);
+            border-top-color: var(--accent);
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(330px, 0.44fr);
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .details-panel,
+        .buy-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-body {
+            padding: 1.45rem;
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .product-title {
+            font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+            line-height: 1.1;
+            letter-spacing: -0.05em;
+        }
+
+        .status-badge {
+            flex-shrink: 0;
+            padding: 0.38rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border: 1px solid transparent;
+        }
+
+        .badge-in_stock {
+            color: var(--success);
+            background: rgba(121, 242, 170, 0.1);
+            border-color: rgba(121, 242, 170, 0.16);
+        }
+
+        .badge-out_of_stock {
+            color: var(--danger);
+            background: rgba(255, 133, 127, 0.1);
+            border-color: rgba(255, 133, 127, 0.16);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .stat-box {
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            margin-top: 0.45rem;
+            font-size: 1.55rem;
+            line-height: 1;
+            font-weight: 700;
+        }
+
+        .stat-value.price { color: var(--accent); }
+        .stat-value.sold { color: var(--text); }
+        .stat-value.stock { color: var(--warn); }
+
+        .section-block {
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .section-title {
+            margin-bottom: 0.75rem;
+            color: var(--text-soft);
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .tiers-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: var(--panel-muted);
+        }
+
+        .tiers-table thead th {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            color: var(--text-dim);
+            font-size: 0.74rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .tiers-table td {
+            padding: 0.85rem 1rem;
+            color: var(--text-soft);
+            font-size: 0.88rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tiers-table tbody tr:first-child td {
+            border-top: none;
+        }
+
+        .tiers-table tbody tr.active-tier {
+            background: rgba(199, 255, 107, 0.08);
+        }
+
+        .tier-price {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .tier-discount {
+            color: var(--warn);
+            font-size: 0.8rem;
+        }
+
+        .tier-hint {
+            margin-top: 0.65rem;
+            color: var(--text-dim);
+            font-size: 0.78rem;
+        }
+
         .description {
-            background: rgba(15,23,42,0.5);
-            border: 1px solid rgba(148,163,184,0.08);
-            border-radius: 12px;
-            padding: 1.25rem 1.5rem;
-            color: #94a3b8;
-            font-size: 0.92rem;
-            line-height: 1.8;
+            padding: 1rem 1.1rem;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: var(--panel-muted);
+            color: var(--text-soft);
             white-space: pre-wrap;
             word-break: break-word;
         }
 
-        /* 购买表单卡 */
-        .buy-card {
-            background: linear-gradient(135deg, rgba(30,41,59,0.85) 0%, rgba(15,23,42,0.95) 100%);
-            border: 1px solid rgba(249,115,22,0.2);
-            border-radius: 20px;
-            padding: 2rem;
-        }
-        .buy-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #e2e8f0;
-            margin-bottom: 1.5rem;
+        .buy-body {
+            padding: 1.4rem;
         }
 
-        .form-group { margin-bottom: 1.25rem; }
+        .buy-title {
+            font-size: 1rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-soft);
+            margin-bottom: 1rem;
+        }
+
+        .form-group { margin-bottom: 1rem; }
+
         .form-label {
             display: block;
-            font-size: 0.875rem;
-            color: #94a3b8;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.45rem;
+            color: var(--text-dim);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
+
         .form-input {
             width: 100%;
+            min-height: 3rem;
             padding: 0.85rem 1rem;
-            background: rgba(15,23,42,0.8);
-            border: 1px solid rgba(148,163,184,0.2);
-            border-radius: 10px;
-            color: #e2e8f0;
-            font-size: 1rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .form-input:focus {
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
             outline: none;
-            border-color: #f97316;
-            box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
+            transition: 0.22s ease;
         }
+
+        .form-input:focus {
+            border-color: rgba(199, 255, 107, 0.22);
+            box-shadow: 0 0 0 4px rgba(199, 255, 107, 0.08);
+        }
+
         .qty-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            gap: 0.8rem;
         }
-        .total-display {
-            background: rgba(249,115,22,0.08);
-            border: 1px solid rgba(249,115,22,0.2);
-            border-radius: 10px;
-            padding: 0.85rem 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .total-label { font-size: 0.875rem; color: #94a3b8; }
-        .total-value { font-size: 1.4rem; font-weight: 800; color: #fb923c; }
 
-        /* 支付方式 */
+        .total-display {
+            min-height: 3rem;
+            padding: 0.7rem 0.95rem;
+            border-radius: 16px;
+            border: 1px solid rgba(199, 255, 107, 0.18);
+            background: rgba(199, 255, 107, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+        }
+
+        .total-label {
+            color: var(--text-soft);
+            font-size: 0.82rem;
+        }
+
+        .total-value {
+            color: var(--accent);
+            font-size: 1.3rem;
+            line-height: 1;
+            font-weight: 700;
+        }
+
         .pay-methods {
             display: grid;
-            grid-template-columns: 1fr 1fr;
             gap: 0.75rem;
-            margin-top: 1.5rem;
+            margin-top: 1rem;
         }
+
         .pay-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.6rem;
-            padding: 0.9rem;
-            border: 2px solid rgba(148,163,184,0.15);
-            border-radius: 12px;
-            background: rgba(15,23,42,0.6);
-            color: #cbd5e1;
-            font-size: 0.95rem;
-            font-weight: 600;
+            gap: 0.65rem;
+            min-height: 3rem;
+            padding: 0.85rem 1rem;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
             cursor: pointer;
-            transition: all 0.25s;
+            transition: 0.22s ease;
         }
+
         .pay-btn:hover:not(:disabled) {
-            border-color: #f97316;
-            background: rgba(249,115,22,0.1);
-            color: #fb923c;
-            transform: translateY(-2px);
+            transform: translateY(-1px);
+            border-color: rgba(199, 255, 107, 0.18);
+            background: rgba(199, 255, 107, 0.1);
+            color: var(--accent);
         }
+
         .pay-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.45;
             cursor: not-allowed;
-            transform: none;
         }
-        .pay-icon { font-size: 1.4rem; }
 
-        /* 提示 */
+        .pay-icon { font-size: 1.2rem; }
+
         .info-tip {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.5rem;
-            background: rgba(251,191,36,0.08);
-            border-left: 3px solid #f59e0b;
-            border-radius: 0 8px 8px 0;
-            padding: 0.9rem 1rem;
-            margin-top: 1.25rem;
+            margin-top: 1rem;
+            padding: 0.95rem 1rem;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 216, 106, 0.12);
+            background: rgba(255, 216, 106, 0.08);
+            color: var(--text-soft);
             font-size: 0.82rem;
-            color: #94a3b8;
-        }
-        .info-tip span { color: #fbbf24; flex-shrink: 0; }
-
-        /* 加载/错误 */
-        .loading-state {
-            text-align: center;
-            padding: 5rem 2rem;
-            color: #64748b;
-        }
-        .loading-spinner {
-            width: 40px; height: 40px;
-            border: 3px solid rgba(249,115,22,0.2);
-            border-top-color: #f97316;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 1rem;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* 分割线 */
-        .divider {
-            border: none;
-            border-top: 1px solid rgba(148,163,184,0.08);
-            margin: 1.75rem 0;
+            display: flex;
+            gap: 0.65rem;
+            align-items: flex-start;
         }
 
-        @media (max-width: 640px) {
-            .product-title { font-size: 1.3rem; }
-            .stats-grid { grid-template-columns: 1fr; gap: 0.75rem; }
-            .qty-row { grid-template-columns: 1fr; }
-            .pay-methods { grid-template-columns: 1fr; }
+        .info-tip span {
+            color: var(--warn);
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 980px) {
+            .intro-grid,
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-title {
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .site-header-inner {
+                min-height: 68px;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                padding: 0.55rem 0;
+            }
+
+            .summary-meta,
+            .stats-grid,
+            .qty-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-
-<nav class="navbar">
-    <div class="navbar-container">
+<header class="site-header">
+    <div class="site-header-inner">
         <a href="/" class="back-link">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
             返回商品列表
         </a>
-        <a href="/" class="logo">⚡ 数字商店</a>
+        <a href="/" class="logo">
+            <span class="logo-mark">></span>
+            <span class="logo-text">数字商店</span>
+        </a>
     </div>
-</nav>
+</header>
 
-<div class="container" id="app">
-    <div class="loading-state">
-        <div class="loading-spinner"></div>
-        <div>加载中...</div>
+<div class="page-shell" id="app">
+    <div class="terminal-window">
+        <div class="window-bar">
+            <div class="window-controls">
+                <span class="window-dot"></span>
+                <span class="window-dot"></span>
+                <span class="window-dot"></span>
+            </div>
+            <div class="window-title">product-loader</div>
+        </div>
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <div>加载中...</div>
+        </div>
     </div>
 </div>
 
@@ -348,9 +584,6 @@ const productId = location.pathname.split('/product/')[1]?.replace(/\/$/, '');
 
 let product = null;
 
-// ============================================
-// 计算阶梯单价
-// ============================================
 function getUnitPrice(qty) {
     if (!product.tiers || !product.tiers.length) return product.price;
     for (let i = product.tiers.length - 1; i >= 0; i--) {
@@ -362,9 +595,6 @@ function getUnitPrice(qty) {
     return product.price;
 }
 
-// ============================================
-// 加载商品详情
-// ============================================
 async function loadProduct() {
     try {
         const res = await fetch(`${API}/products/${productId}`);
@@ -375,113 +605,200 @@ async function loadProduct() {
         renderPage();
     } catch (e) {
         document.getElementById('app').innerHTML = `
-            <div class="loading-state">
-                <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
-                <div style="color:#e2e8f0;font-size:1.1rem;margin-bottom:0.5rem;">商品不存在或已下架</div>
-                <a href="/" style="color:#f97316;text-decoration:none;">← 返回首页</a>
+            <div class="terminal-window">
+                <div class="window-bar">
+                    <div class="window-controls">
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                    </div>
+                    <div class="window-title">not-found.log</div>
+                </div>
+                <div class="loading-state">
+                    <div style="font-size: 2.2rem; margin-bottom: 0.8rem;">404</div>
+                    <div style="color: var(--text); font-size: 1rem; margin-bottom: 0.5rem;">商品不存在或已下架</div>
+                    <a href="/" style="color: var(--accent);">返回首页</a>
+                </div>
             </div>`;
     }
 }
 
-// ============================================
-// 渲染页面
-// ============================================
 function renderPage() {
     const inStock = product.status === 'in_stock';
     const maxQty = product.stock || product.available_cards || 0;
 
-    // 阶梯定价 HTML
     let tiersHtml = '';
     if (product.tiers && product.tiers.length > 0) {
         const rows = product.tiers.map(t => {
             const qtyRange = t.max_qty ? `${t.min_qty} - ${t.max_qty} 件` : `${t.min_qty}+ 件`;
             const discount = t.price < product.price
                 ? `<span class="tier-discount">${Math.round(t.price / product.price * 10)}折</span>`
-                : `<span style="color:#475569">原价</span>`;
+                : `<span style="color: var(--text-dim)">原价</span>`;
             return `<tr data-min="${t.min_qty}" data-max="${t.max_qty ?? 99999}" data-price="${t.price}">
                 <td>${qtyRange}</td>
-                <td class="tier-price">¥${parseFloat(t.price).toFixed(2)}<span style="font-size:0.75rem;color:#64748b"> / 件</span></td>
+                <td class="tier-price">¥${parseFloat(t.price).toFixed(2)}<span style="font-size:0.74rem;color:var(--text-dim)"> / 件</span></td>
                 <td>${discount}</td>
             </tr>`;
         }).join('');
         tiersHtml = `
-        <hr class="divider">
-        <p class="section-title">📊 阶梯优惠</p>
-        <table class="tiers-table">
-            <thead><tr><th>购买数量</th><th>单价</th><th>优惠</th></tr></thead>
-            <tbody id="tiersBody">${rows}</tbody>
-        </table>
-        <p class="tier-hint">📌 购买越多，单价越低，总价自动更新</p>`;
+        <div class="section-block">
+            <p class="section-title">阶梯优惠</p>
+            <table class="tiers-table">
+                <thead><tr><th>购买数量</th><th>单价</th><th>优惠</th></tr></thead>
+                <tbody id="tiersBody">${rows}</tbody>
+            </table>
+            <p class="tier-hint">购买数量变化后，总价会自动更新，并高亮当前适用档位。</p>
+        </div>`;
     }
 
     document.getElementById('app').innerHTML = `
-        <!-- 商品主卡 -->
-        <div class="product-card">
-            <div class="product-header">
-                <h1 class="product-title">${escHtml(product.name)}</h1>
-                <span class="status-badge badge-${product.status}">${inStock ? '✓ 有货' : '× 售罄'}</span>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <div class="stat-label">单价</div>
-                    <div class="stat-value price" id="displayPrice">¥${parseFloat(product.price).toFixed(2)}</div>
+        <div class="intro-grid">
+            <div class="terminal-window">
+                <div class="window-bar">
+                    <div class="window-controls">
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                    </div>
+                    <div class="window-title">product-summary</div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-label">已售</div>
-                    <div class="stat-value sold">${product.sold_count || 0} <small style="font-size:0.9rem">件</small></div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">库存</div>
-                    <div class="stat-value stock">${maxQty} <small style="font-size:0.9rem">件</small></div>
-                </div>
-            </div>
-
-            ${tiersHtml}
-
-            <hr class="divider">
-            <p class="section-title">📄 商品描述</p>
-            <div class="description">${escHtml(product.description || '暂无描述')}</div>
-        </div>
-
-        <!-- 购买区 -->
-        <div class="buy-card">
-            <div class="buy-title">🛒 立即购买</div>
-
-            <div class="form-group">
-                <label class="form-label" for="buyerEmail">接收卡密的邮箱地址 *</label>
-                <input class="form-input" type="email" id="buyerEmail"
-                    placeholder="your@email.com" required autocomplete="email">
-            </div>
-
-            <div class="qty-row">
-                <div class="form-group" style="margin-bottom:0">
-                    <label class="form-label" for="buyQty">购买数量</label>
-                    <input class="form-input" type="number" id="buyQty"
-                        min="1" max="${maxQty}" value="1"
-                        oninput="updateTotal()" ${!inStock ? 'disabled' : ''}>
-                </div>
-                <div class="form-group" style="margin-bottom:0">
-                    <label class="form-label">应付金额</label>
-                    <div class="total-display">
-                        <span class="total-label">合计</span>
-                        <span class="total-value" id="totalPrice">¥${parseFloat(product.price).toFixed(2)}</span>
+                <div class="summary-panel">
+                    <div class="summary-kicker">商品详情 / 实时库存</div>
+                    <h1 class="summary-title">${escHtml(product.name)}</h1>
+                    <p class="summary-note">${escHtml(product.description || '支持自动发货的数字商品，购买后将按订单流程自动处理。')}</p>
+                    <div class="summary-meta">
+                        <div class="meta-card">
+                            <div class="meta-label">状态</div>
+                            <div class="meta-value" style="color:${inStock ? 'var(--success)' : 'var(--danger)'};">${inStock ? '有货' : '售罄'}</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">交付方式</div>
+                            <div class="meta-value">邮箱发货</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">支付方式</div>
+                            <div class="meta-value">支付宝 / 微信</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="pay-methods">
-                <button class="pay-btn" onclick="submitOrder('alipay')" id="btnAlipay" ${!inStock ? 'disabled' : ''}>
-                    <span class="pay-icon">💳</span> 支付宝支付
-                </button>
-                <button class="pay-btn" onclick="submitOrder('wechat')" id="btnWechat" ${!inStock ? 'disabled' : ''}>
-                    <span class="pay-icon">💚</span> 微信支付
-                </button>
+            <div class="terminal-window">
+                <div class="window-bar">
+                    <div class="window-controls">
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                    </div>
+                    <div class="window-title">snapshot.json</div>
+                </div>
+                <div class="summary-panel">
+                    <div class="meta-card">
+                        <div class="meta-label">单价</div>
+                        <div class="meta-value" id="displayPrice">¥${parseFloat(product.price).toFixed(2)}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">已售数量</div>
+                        <div class="meta-value">${product.sold_count || 0}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">当前库存</div>
+                        <div class="meta-value">${maxQty}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="terminal-window details-panel">
+                <div class="window-bar">
+                    <div class="window-controls">
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                    </div>
+                    <div class="window-title">product-details.ts</div>
+                </div>
+                <div class="panel-body">
+                    <div class="product-header">
+                        <h2 class="product-title">${escHtml(product.name)}</h2>
+                        <span class="status-badge badge-${product.status}">${inStock ? '有货' : '售罄'}</span>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">单价</div>
+                            <div class="stat-value price" id="detailPrice">¥${parseFloat(product.price).toFixed(2)}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">已售</div>
+                            <div class="stat-value sold">${product.sold_count || 0} <small style="font-size:0.8rem;">件</small></div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">库存</div>
+                            <div class="stat-value stock">${maxQty} <small style="font-size:0.8rem;">件</small></div>
+                        </div>
+                    </div>
+
+                    ${tiersHtml}
+
+                    <div class="section-block">
+                        <p class="section-title">商品描述</p>
+                        <div class="description">${escHtml(product.description || '暂无描述')}</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="info-tip">
-                <span>📧</span>
-                付款成功后，卡密将 <strong style="color:#fbbf24">自动发送到您填写的邮箱</strong>，请确保邮箱地址填写正确。
+            <div class="terminal-window buy-card">
+                <div class="window-bar">
+                    <div class="window-controls">
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                    </div>
+                    <div class="window-title">checkout-panel</div>
+                </div>
+                <div class="buy-body">
+                    <div class="buy-title">立即购买</div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="buyerEmail">接收卡密的邮箱地址</label>
+                        <input class="form-input" type="email" id="buyerEmail"
+                            placeholder="your@email.com" required autocomplete="email">
+                    </div>
+
+                    <div class="qty-row">
+                        <div class="form-group" style="margin-bottom:0">
+                            <label class="form-label" for="buyQty">购买数量</label>
+                            <input class="form-input" type="number" id="buyQty"
+                                min="1" max="${maxQty}" value="1"
+                                oninput="updateTotal()" ${!inStock ? 'disabled' : ''}>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0">
+                            <label class="form-label">应付金额</label>
+                            <div class="total-display">
+                                <span class="total-label">合计</span>
+                                <span class="total-value" id="totalPrice">¥${parseFloat(product.price).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pay-methods">
+                        <button class="pay-btn" onclick="submitOrder('alipay')" id="btnAlipay" ${!inStock ? 'disabled' : ''}>
+                            <span class="pay-icon">💳</span> 支付宝支付
+                        </button>
+                        <button class="pay-btn" onclick="submitOrder('wechat')" id="btnWechat" ${!inStock ? 'disabled' : ''}>
+                            <span class="pay-icon">💚</span> 微信支付
+                        </button>
+                    </div>
+
+                    <div class="info-tip">
+                        <span>!</span>
+                        <div>
+                            付款成功后，卡密将自动发送到你填写的邮箱。请确认邮箱地址准确无误。
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -490,16 +807,15 @@ function renderPage() {
     highlightTier(1);
 }
 
-// ============================================
-// 更新总价 + 高亮对应档位
-// ============================================
 function updateTotal() {
     const qty = parseInt(document.getElementById('buyQty')?.value) || 1;
     const unitPrice = getUnitPrice(qty);
     const total = (unitPrice * qty).toFixed(2);
     const priceEl = document.getElementById('displayPrice');
+    const detailPriceEl = document.getElementById('detailPrice');
     const totalEl = document.getElementById('totalPrice');
     if (priceEl) priceEl.textContent = `¥${parseFloat(unitPrice).toFixed(2)}`;
+    if (detailPriceEl) detailPriceEl.textContent = `¥${parseFloat(unitPrice).toFixed(2)}`;
     if (totalEl) totalEl.textContent = `¥${total}`;
     highlightTier(qty);
 }
@@ -512,9 +828,6 @@ function highlightTier(qty) {
     });
 }
 
-// ============================================
-// 提交订单（游客模式）
-// ============================================
 async function submitOrder(paymentMethod) {
     const email = document.getElementById('buyerEmail')?.value?.trim();
     const qty = parseInt(document.getElementById('buyQty')?.value) || 1;
@@ -529,7 +842,6 @@ async function submitOrder(paymentMethod) {
         return;
     }
 
-    // 锁定按钮防重复提交
     ['btnAlipay', 'btnWechat'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) { btn.disabled = true; btn.textContent = '处理中...'; }
@@ -548,7 +860,6 @@ async function submitOrder(paymentMethod) {
             return;
         }
 
-        // 跳转支付
         if (data.paymentInfo?.isTestMode) {
             if (confirm(`测试模式\n商品：${data.productName}\n数量：${data.quantity} 件\n金额：¥${data.amount}\n\n点击确定模拟支付成功，卡密将发送到 ${email}`)) {
                 window.location.href = data.paymentInfo.payUrl;
@@ -560,13 +871,10 @@ async function submitOrder(paymentMethod) {
         console.error(e);
         alert('网络错误，请稍后重试');
     } finally {
-        renderPage(); // 重置按钮
+        renderPage();
     }
 }
 
-// ============================================
-// XSS 防护
-// ============================================
 function escHtml(str) {
     const d = document.createElement('div');
     d.textContent = str || '';
