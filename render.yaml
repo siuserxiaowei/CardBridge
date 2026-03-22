@@ -2,8 +2,14 @@ services:
   - type: web
     name: digital-shop
     env: node
-    buildCommand: npm install && npm run init-db
-    startCommand: npm start
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm run init-db && npm start
+    autoDeployTrigger: commit
+    disk:
+      name: shop-data
+      mountPath: /opt/render/project/src/database
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
