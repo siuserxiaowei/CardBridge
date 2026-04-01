@@ -150,71 +150,81 @@
             text-transform: uppercase;
         }
 
-        .intro-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
-            gap: 1.25rem;
-            margin-bottom: 1.25rem;
+        .detail-max {
+            max-width: 720px;
+            margin: 0 auto;
         }
 
-        .summary-panel {
-            padding: 1.6rem;
+        /* 进度条 */
+        .steps-bar {
             display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-        }
-
-        .summary-kicker {
-            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            width: fit-content;
-            padding: 0.46rem 0.78rem;
-            border-radius: 999px;
-            border: 1px solid rgba(199, 255, 107, 0.18);
-            background: rgba(199, 255, 107, 0.08);
-            color: var(--accent);
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .summary-title {
-            font-size: clamp(2rem, 4.8vw, 3.7rem);
-            line-height: 1.02;
-            letter-spacing: -0.06em;
-            max-width: 11ch;
-        }
-
-        .summary-note {
-            color: var(--text-soft);
-            max-width: 36rem;
-        }
-
-        .summary-meta {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.8rem;
-        }
-
-        .meta-card {
-            padding: 1rem;
-            border-radius: var(--radius-sm);
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 1.75rem;
+            padding: 1.2rem 1.5rem;
+            border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.02);
+            background: linear-gradient(180deg, rgba(18, 22, 28, 0.95), rgba(10, 13, 18, 0.98));
         }
 
-        .meta-label {
-            color: var(--text-dim);
-            font-size: 0.72rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
         }
 
-        .meta-value {
-            margin-top: 0.45rem;
-            font-size: 1.2rem;
+        .step-circle {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            font-size: 0.82rem;
             font-weight: 700;
+            border: 2px solid var(--line);
+            color: var(--text-dim);
+            background: transparent;
+            flex-shrink: 0;
+        }
+
+        .step-circle.active {
+            border-color: var(--accent);
+            background: rgba(199, 255, 107, 0.15);
+            color: var(--accent);
+        }
+
+        .step-circle.done {
+            border-color: var(--success);
+            background: rgba(121, 242, 170, 0.15);
+            color: var(--success);
+        }
+
+        .step-label {
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+
+        .step-label.active {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .step-label.done {
+            color: var(--success);
+        }
+
+        .step-line {
+            width: 3.5rem;
+            height: 2px;
+            background: var(--line);
+            margin: 0 0.6rem;
+            flex-shrink: 0;
+        }
+
+        .step-line.done {
+            background: var(--success);
         }
 
         .loading-state {
@@ -235,14 +245,12 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .content-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(330px, 0.44fr);
-            gap: 1.5rem;
-            align-items: start;
+        .content-single {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
         }
 
-        .details-panel,
         .buy-card {
             display: flex;
             flex-direction: column;
@@ -375,8 +383,26 @@
         }
 
         .tier-discount {
-            color: var(--warn);
             font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .tier-discount.hot {
+            color: #ff857f;
+            background: rgba(255, 133, 127, 0.12);
+        }
+
+        .tier-discount.warm {
+            color: #ffd86a;
+            background: rgba(255, 216, 106, 0.12);
+        }
+
+        .tier-discount.cool {
+            color: var(--success);
+            background: rgba(121, 242, 170, 0.12);
         }
 
         .tier-hint {
@@ -519,11 +545,6 @@
         }
 
         @media (max-width: 980px) {
-            .intro-grid,
-            .content-grid {
-                grid-template-columns: 1fr;
-            }
-
             .summary-title {
                 max-width: none;
             }
@@ -580,7 +601,16 @@
 
 <script>
 const API = window.location.origin + '/api';
-const productId = location.pathname.split('/product/')[1]?.replace(/\/$/, '');
+
+function getProductId() {
+    const queryId = new URLSearchParams(window.location.search).get('id');
+    if (queryId) return queryId;
+
+    const pathId = location.pathname.split('/product/')[1]?.replace(/\/$/, '');
+    return pathId || '';
+}
+
+const productId = getProductId();
 
 let product = null;
 
@@ -597,6 +627,10 @@ function getUnitPrice(qty) {
 
 async function loadProduct() {
     try {
+        if (!productId) {
+            throw new Error('缺少商品 ID');
+        }
+
         const res = await fetch(`${API}/products/${productId}`);
         if (!res.ok) throw new Error('商品不存在');
         product = await res.json();
@@ -631,13 +665,19 @@ function renderPage() {
     if (product.tiers && product.tiers.length > 0) {
         const rows = product.tiers.map(t => {
             const qtyRange = t.max_qty ? `${t.min_qty} - ${t.max_qty} 件` : `${t.min_qty}+ 件`;
-            const discount = t.price < product.price
-                ? `<span class="tier-discount">${Math.round(t.price / product.price * 10)}折</span>`
-                : `<span style="color: var(--text-dim)">原价</span>`;
+            const ratio = t.price / product.price;
+            const pct = Math.round(ratio * 10);
+            let discountHtml;
+            if (ratio >= 1) {
+                discountHtml = `<span style="color: var(--text-dim)">原价</span>`;
+            } else {
+                const cls = ratio <= 0.8 ? 'hot' : ratio <= 0.9 ? 'warm' : 'cool';
+                discountHtml = `<span class="tier-discount ${cls}">${pct}折</span>`;
+            }
             return `<tr data-min="${t.min_qty}" data-max="${t.max_qty ?? 99999}" data-price="${t.price}">
                 <td>${qtyRange}</td>
                 <td class="tier-price">¥${parseFloat(t.price).toFixed(2)}<span style="font-size:0.74rem;color:var(--text-dim)"> / 件</span></td>
-                <td>${discount}</td>
+                <td>${discountHtml}</td>
             </tr>`;
         }).join('');
         tiersHtml = `
@@ -647,155 +687,118 @@ function renderPage() {
                 <thead><tr><th>购买数量</th><th>单价</th><th>优惠</th></tr></thead>
                 <tbody id="tiersBody">${rows}</tbody>
             </table>
-            <p class="tier-hint">购买数量变化后，总价会自动更新，并高亮当前适用档位。</p>
+            <p class="tier-hint">购买数量越多，单价越优惠。</p>
         </div>`;
     }
 
     document.getElementById('app').innerHTML = `
-        <div class="intro-grid">
-            <div class="terminal-window">
-                <div class="window-bar">
-                    <div class="window-controls">
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                    </div>
-                    <div class="window-title">product-summary</div>
+        <div class="detail-max">
+            <!-- 进度条 -->
+            <div class="steps-bar">
+                <div class="step-item">
+                    <div class="step-circle active">1</div>
+                    <span class="step-label active">创建订单</span>
                 </div>
-                <div class="summary-panel">
-                    <div class="summary-kicker">商品详情 / 实时库存</div>
-                    <h1 class="summary-title">${escHtml(product.name)}</h1>
-                    <p class="summary-note">${escHtml(product.description || '支持自动发货的数字商品，购买后将按订单流程自动处理。')}</p>
-                    <div class="summary-meta">
-                        <div class="meta-card">
-                            <div class="meta-label">状态</div>
-                            <div class="meta-value" style="color:${inStock ? 'var(--success)' : 'var(--danger)'};">${inStock ? '有货' : '售罄'}</div>
-                        </div>
-                        <div class="meta-card">
-                            <div class="meta-label">交付方式</div>
-                            <div class="meta-value">邮箱发货</div>
-                        </div>
-                        <div class="meta-card">
-                            <div class="meta-label">支付方式</div>
-                            <div class="meta-value">支付宝 / 微信</div>
-                        </div>
-                    </div>
+                <div class="step-line"></div>
+                <div class="step-item">
+                    <div class="step-circle">2</div>
+                    <span class="step-label">扫码支付</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step-item">
+                    <div class="step-circle">3</div>
+                    <span class="step-label">获取卡密</span>
                 </div>
             </div>
 
-            <div class="terminal-window">
-                <div class="window-bar">
-                    <div class="window-controls">
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                    </div>
-                    <div class="window-title">snapshot.json</div>
-                </div>
-                <div class="summary-panel">
-                    <div class="meta-card">
-                        <div class="meta-label">单价</div>
-                        <div class="meta-value" id="displayPrice">¥${parseFloat(product.price).toFixed(2)}</div>
-                    </div>
-                    <div class="meta-card">
-                        <div class="meta-label">已售数量</div>
-                        <div class="meta-value">${product.sold_count || 0}</div>
-                    </div>
-                    <div class="meta-card">
-                        <div class="meta-label">当前库存</div>
-                        <div class="meta-value">${maxQty}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-grid">
-            <div class="terminal-window details-panel">
-                <div class="window-bar">
-                    <div class="window-controls">
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                    </div>
-                    <div class="window-title">product-details.ts</div>
-                </div>
-                <div class="panel-body">
-                    <div class="product-header">
-                        <h2 class="product-title">${escHtml(product.name)}</h2>
-                        <span class="status-badge badge-${product.status}">${inStock ? '有货' : '售罄'}</span>
-                    </div>
-
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">单价</div>
-                            <div class="stat-value price" id="detailPrice">¥${parseFloat(product.price).toFixed(2)}</div>
+            <div class="content-single">
+                <!-- 商品标题 + 状态 + 三栏指标 -->
+                <div class="terminal-window">
+                    <div class="window-bar">
+                        <div class="window-controls">
+                            <span class="window-dot"></span>
+                            <span class="window-dot"></span>
+                            <span class="window-dot"></span>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-label">已售</div>
-                            <div class="stat-value sold">${product.sold_count || 0} <small style="font-size:0.8rem;">件</small></div>
+                        <div class="window-title">product-details</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="product-header">
+                            <h2 class="product-title">${escHtml(product.name)}</h2>
+                            <span class="status-badge badge-${product.status}">${inStock ? '有货' : '售罄'}</span>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-label">库存</div>
-                            <div class="stat-value stock">${maxQty} <small style="font-size:0.8rem;">件</small></div>
-                        </div>
-                    </div>
 
-                    ${tiersHtml}
-
-                    <div class="section-block">
-                        <p class="section-title">商品描述</p>
-                        <div class="description">${escHtml(product.description || '暂无描述')}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="terminal-window buy-card">
-                <div class="window-bar">
-                    <div class="window-controls">
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                        <span class="window-dot"></span>
-                    </div>
-                    <div class="window-title">checkout-panel</div>
-                </div>
-                <div class="buy-body">
-                    <div class="buy-title">立即购买</div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="buyerEmail">接收卡密的邮箱地址</label>
-                        <input class="form-input" type="email" id="buyerEmail"
-                            placeholder="your@email.com" required autocomplete="email">
-                    </div>
-
-                    <div class="qty-row">
-                        <div class="form-group" style="margin-bottom:0">
-                            <label class="form-label" for="buyQty">购买数量</label>
-                            <input class="form-input" type="number" id="buyQty"
-                                min="1" max="${maxQty}" value="1"
-                                oninput="updateTotal()" ${!inStock ? 'disabled' : ''}>
-                        </div>
-                        <div class="form-group" style="margin-bottom:0">
-                            <label class="form-label">应付金额</label>
-                            <div class="total-display">
-                                <span class="total-label">合计</span>
-                                <span class="total-value" id="totalPrice">¥${parseFloat(product.price).toFixed(2)}</span>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">单价</div>
+                                <div class="stat-value price" id="detailPrice">¥${parseFloat(product.price).toFixed(2)}</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">已售</div>
+                                <div class="stat-value sold">${product.sold_count || 0} <small style="font-size:0.8rem;">件</small></div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">库存</div>
+                                <div class="stat-value stock">${maxQty} <small style="font-size:0.8rem;">件</small></div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="pay-methods">
-                        <button class="pay-btn" onclick="submitOrder('alipay')" id="btnAlipay" ${!inStock ? 'disabled' : ''}>
-                            <span class="pay-icon">💳</span> 支付宝支付
-                        </button>
-                        <button class="pay-btn" onclick="submitOrder('wechat')" id="btnWechat" ${!inStock ? 'disabled' : ''}>
-                            <span class="pay-icon">💚</span> 微信支付
-                        </button>
-                    </div>
+                        ${tiersHtml}
 
-                    <div class="info-tip">
-                        <span>!</span>
-                        <div>
-                            付款成功后，卡密将自动发送到你填写的邮箱。请确认邮箱地址准确无误。
+                        <div class="section-block">
+                            <p class="section-title">商品描述</p>
+                            <div class="description">${escHtml(product.description || '暂无描述')}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 购买表单 -->
+                <div class="terminal-window buy-card">
+                    <div class="window-bar">
+                        <div class="window-controls">
+                            <span class="window-dot"></span>
+                            <span class="window-dot"></span>
+                            <span class="window-dot"></span>
+                        </div>
+                        <div class="window-title">checkout-panel</div>
+                    </div>
+                    <div class="buy-body">
+                        <div class="buy-title">立即购买</div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="buyerEmail">接收卡密的邮箱地址</label>
+                            <input class="form-input" type="email" id="buyerEmail"
+                                placeholder="your@email.com" required autocomplete="email">
+                        </div>
+
+                        <div class="qty-row">
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label" for="buyQty">购买数量</label>
+                                <input class="form-input" type="number" id="buyQty"
+                                    min="1" max="${maxQty}" value="1"
+                                    oninput="updateTotal()" ${!inStock ? 'disabled' : ''}>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label">应付金额</label>
+                                <div class="total-display">
+                                    <span class="total-label">合计</span>
+                                    <span class="total-value" id="totalPrice">¥${parseFloat(product.price).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pay-methods">
+                            <button class="pay-btn" onclick="submitOrder('alipay')" id="btnAlipay" ${!inStock ? 'disabled' : ''}>
+                                <span class="pay-icon">💳</span> 支付宝支付
+                            </button>
+                            <button class="pay-btn" onclick="submitOrder('wechat')" id="btnWechat" ${!inStock ? 'disabled' : ''}>
+                                <span class="pay-icon">💚</span> 微信支付
+                            </button>
+                        </div>
+
+                        <div class="info-tip">
+                            <span>!</span>
+                            <div>付款成功后，卡密将自动发送到你填写的邮箱。请确认邮箱地址准确无误。</div>
                         </div>
                     </div>
                 </div>
@@ -811,10 +814,8 @@ function updateTotal() {
     const qty = parseInt(document.getElementById('buyQty')?.value) || 1;
     const unitPrice = getUnitPrice(qty);
     const total = (unitPrice * qty).toFixed(2);
-    const priceEl = document.getElementById('displayPrice');
     const detailPriceEl = document.getElementById('detailPrice');
     const totalEl = document.getElementById('totalPrice');
-    if (priceEl) priceEl.textContent = `¥${parseFloat(unitPrice).toFixed(2)}`;
     if (detailPriceEl) detailPriceEl.textContent = `¥${parseFloat(unitPrice).toFixed(2)}`;
     if (totalEl) totalEl.textContent = `¥${total}`;
     highlightTier(qty);
@@ -860,13 +861,16 @@ async function submitOrder(paymentMethod) {
             return;
         }
 
-        if (data.paymentInfo?.isTestMode) {
-            if (confirm(`测试模式\n商品：${data.productName}\n数量：${data.quantity} 件\n金额：¥${data.amount}\n\n点击确定模拟支付成功，卡密将发送到 ${email}`)) {
-                window.location.href = data.paymentInfo.payUrl;
-            }
-        } else {
-            window.location.href = data.paymentInfo.payUrl || data.paymentInfo.codeUrl;
-        }
+        // Save order data and redirect to payment page
+        sessionStorage.setItem('pendingOrder', JSON.stringify({
+            orderNo: data.orderNo,
+            amount: data.amount,
+            quantity: data.quantity,
+            productName: data.productName,
+            isTestMode: data.paymentInfo?.isTestMode || false,
+            payUrl: data.paymentInfo?.payUrl || data.paymentInfo?.codeUrl || ''
+        }));
+        window.location.href = `/payment/${data.orderNo}`;
     } catch (e) {
         console.error(e);
         alert('网络错误，请稍后重试');

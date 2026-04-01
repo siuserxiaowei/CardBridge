@@ -517,43 +517,42 @@
             min-height: 5rem;
         }
 
+        .card-stats-row {
+            margin-top: 1.2rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.6rem;
+        }
+
+        .card-stat {
+            padding: 0.7rem 0.65rem;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.02);
+            text-align: center;
+        }
+
+        .card-stat-label {
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .card-stat-value {
+            margin-top: 0.3rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .card-stat-value.price { color: var(--accent); }
+        .card-stat-value.sold { color: var(--text); }
+        .card-stat-value.stock { color: #ffd86a; }
+
         .card-footer {
             margin-top: auto;
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 1rem;
-            padding-top: 1.6rem;
-        }
-
-        .card-price-section {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-        }
-
-        .card-price {
-            font-size: 1.8rem;
-            line-height: 1;
-            color: var(--accent);
-            font-weight: 700;
-            letter-spacing: -0.04em;
-        }
-
-        .card-stock {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-dim);
-            font-size: 0.78rem;
-        }
-
-        .stock-dot {
-            width: 0.42rem;
-            height: 0.42rem;
-            border-radius: 999px;
-            background: var(--accent);
-            box-shadow: 0 0 0 5px rgba(199, 255, 107, 0.08);
+            padding-top: 1.2rem;
         }
 
         .btn-buy {
@@ -1007,6 +1006,6 @@
         <p>Terminal-inspired layout / 自动发货 / 安全可靠的数字商品交易平台</p>
     </footer>
 
-    <script src="/js/main.js"></script>
+    <script src="/js/main.js?v=20260401"></script>
 </body>
 </html>

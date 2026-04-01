@@ -113,7 +113,7 @@ async function loadProducts() {
         }
 
         grid.innerHTML = products.map(product => `
-            <article class="product-card" onclick="location.href='/product/${product.id}'" style="cursor:pointer;">
+            <article class="product-card" onclick="location.href='/product.html?id=${product.id}'" style="cursor:pointer;">
                 <div class="card-content">
                     <div class="card-header">
                         <h3 class="card-title">${escapeHtml(product.name)}</h3>
@@ -122,19 +122,25 @@ async function loadProducts() {
                         </span>
                     </div>
                     <p class="card-description">${escapeHtml(product.description || '')}</p>
-                    <div class="card-footer">
-                        <div class="card-price-section">
-                            <span class="card-price">¥${product.price.toFixed(2)}</span>
-                            <span class="card-stock">
-                                <span class="stock-dot"></span>
-                                库存 ${product.stock} 件
-                            </span>
-                            <span style="font-size:0.78rem;color:#475569;margin-top:2px;">已售 ${product.sold_count || 0} 件</span>
+                    <div class="card-stats-row">
+                        <div class="card-stat">
+                            <div class="card-stat-label">单价</div>
+                            <div class="card-stat-value price">¥${product.price.toFixed(2)}</div>
                         </div>
-                        <button class="btn-buy"
-                            onclick="event.stopPropagation(); location.href='/product/${product.id}'"
+                        <div class="card-stat">
+                            <div class="card-stat-label">已售</div>
+                            <div class="card-stat-value sold">${product.sold_count || 0}<small style="font-size:0.7rem;color:var(--text-dim);"> 件</small></div>
+                        </div>
+                        <div class="card-stat">
+                            <div class="card-stat-label">库存</div>
+                            <div class="card-stat-value stock">${product.stock}<small style="font-size:0.7rem;color:var(--text-dim);"> 件</small></div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-buy" style="width:100%"
+                            onclick="event.stopPropagation(); location.href='/product.html?id=${product.id}'"
                             ${product.status !== 'in_stock' ? 'disabled' : ''}>
-                            ${product.status === 'in_stock' ? '立即购买' : '暂无库存'}
+                            ${product.status === 'in_stock' ? '查看详情' : '暂无库存'}
                         </button>
                     </div>
                 </div>
@@ -186,16 +192,16 @@ async function createOrder(paymentMethod) {
 
         closePaymentModal();
 
-        // 处理支付
-        if (data.paymentInfo.isTestMode) {
-            // 测试模式：直接跳转到测试支付页面
-            if (confirm('测试模式：点击确定模拟支付成功')) {
-                window.location.href = data.paymentInfo.payUrl;
-            }
-        } else {
-            // 实际支付：跳转到支付页面
-            window.location.href = data.paymentInfo.payUrl || data.paymentInfo.codeUrl;
-        }
+        // Save order data and redirect to payment page
+        sessionStorage.setItem('pendingOrder', JSON.stringify({
+            orderNo: data.orderNo,
+            amount: data.amount,
+            quantity: data.quantity,
+            productName: data.productName,
+            isTestMode: data.paymentInfo?.isTestMode || false,
+            payUrl: data.paymentInfo?.payUrl || data.paymentInfo?.codeUrl || ''
+        }));
+        window.location.href = `/payment/${data.orderNo}`;
     } catch (error) {
         console.error('创建订单失败:', error);
         alert('创建订单失败，请稍后重试');

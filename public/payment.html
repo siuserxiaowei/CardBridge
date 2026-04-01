@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付订单 - 数字商店</title>
+    <style>
+        :root {
+            --bg: #0b0d10;
+            --panel: rgba(17, 21, 27, 0.94);
+            --line: rgba(180, 192, 205, 0.14);
+            --line-strong: rgba(220, 231, 243, 0.22);
+            --text: #eef4fb;
+            --text-soft: #b6c2cf;
+            --text-dim: #728092;
+            --accent: #c7ff6b;
+            --success: #79f2aa;
+            --danger: #ff857f;
+            --warn: #ffd86a;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+            --radius: 26px;
+            --radius-sm: 18px;
+            --max-width: 720px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(199, 255, 107, 0.07), transparent 26%),
+                radial-gradient(circle at 85% 14%, rgba(125, 211, 252, 0.07), transparent 24%),
+                linear-gradient(180deg, #090b0e 0%, #0d1014 45%, #090b0e 100%);
+            color: var(--text);
+            font-family: "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono", "Fira Code", "Menlo", monospace;
+            line-height: 1.7;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            background: rgba(9, 11, 14, 0.72);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .site-header-inner {
+            width: min(calc(100% - 32px), var(--max-width));
+            margin: 0 auto;
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--text-soft);
+            font-size: 0.82rem;
+            padding: 0.7rem 0.95rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            transition: 0.22s ease;
+        }
+
+        .back-link:hover {
+            color: var(--text);
+            border-color: var(--line);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .logo-mark {
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(180deg, rgba(199, 255, 107, 0.16), rgba(199, 255, 107, 0.04));
+            color: var(--accent);
+        }
+
+        .logo-text {
+            font-size: 0.94rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .page-shell {
+            width: min(calc(100% - 32px), var(--max-width));
+            margin: 0 auto;
+            padding: 2.4rem 0 4rem;
+        }
+
+        /* Steps bar */
+        .steps-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 1.75rem;
+            padding: 1.2rem 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(18, 22, 28, 0.95), rgba(10, 13, 18, 0.98));
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .step-circle {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border: 2px solid var(--line);
+            color: var(--text-dim);
+            background: transparent;
+            flex-shrink: 0;
+        }
+
+        .step-circle.active {
+            border-color: var(--accent);
+            background: rgba(199, 255, 107, 0.15);
+            color: var(--accent);
+        }
+
+        .step-circle.done {
+            border-color: var(--success);
+            background: rgba(121, 242, 170, 0.15);
+            color: var(--success);
+        }
+
+        .step-label {
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+
+        .step-label.active { color: var(--accent); font-weight: 600; }
+        .step-label.done { color: var(--success); }
+
+        .step-line {
+            width: 3.5rem;
+            height: 2px;
+            background: var(--line);
+            margin: 0 0.6rem;
+            flex-shrink: 0;
+        }
+
+        .step-line.done { background: var(--success); }
+
+        /* Terminal window */
+        .terminal-window {
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(18, 22, 28, 0.95), rgba(10, 13, 18, 0.98));
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .window-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.95rem 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .window-controls { display: flex; gap: 0.4rem; }
+        .window-dot { width: 0.68rem; height: 0.68rem; border-radius: 999px; }
+        .window-dot:nth-child(1) { background: #ff6e68; }
+        .window-dot:nth-child(2) { background: #ffd86a; }
+        .window-dot:nth-child(3) { background: #68f29a; }
+
+        .window-title {
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .pay-body {
+            padding: 2rem 1.5rem;
+            text-align: center;
+        }
+
+        .pay-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .order-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.5rem 1.2rem;
+            text-align: left;
+            max-width: 380px;
+            margin: 0 auto 1.75rem;
+            padding: 1.1rem 1.3rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .order-info-label {
+            color: var(--text-dim);
+            font-size: 0.82rem;
+        }
+
+        .order-info-value {
+            color: var(--text);
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .order-info-value.amount {
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        /* QR area */
+        .qr-area {
+            margin: 0 auto 1.5rem;
+            max-width: 260px;
+            padding: 1.5rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: #fff;
+        }
+
+        .qr-area img,
+        .qr-area canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .qr-hint {
+            margin-top: 0.75rem;
+            color: var(--text-dim);
+            font-size: 0.82rem;
+        }
+
+        /* Timer */
+        .timer-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.65rem 1.2rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 216, 106, 0.18);
+            background: rgba(255, 216, 106, 0.08);
+            color: var(--warn);
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .timer-bar.expired {
+            border-color: rgba(255, 133, 127, 0.18);
+            background: rgba(255, 133, 127, 0.08);
+            color: var(--danger);
+        }
+
+        /* Status */
+        .status-msg {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(199, 255, 107, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 999px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Success state */
+        .success-panel {
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            margin: 0 auto 1rem;
+            border-radius: 999px;
+            background: rgba(121, 242, 170, 0.15);
+            border: 2px solid var(--success);
+            display: grid;
+            place-items: center;
+            color: var(--success);
+            font-size: 1.5rem;
+        }
+
+        .success-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--success);
+            margin-bottom: 0.5rem;
+        }
+
+        .success-sub {
+            color: var(--text-soft);
+            font-size: 0.88rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 999px;
+            border: 1px solid rgba(199, 255, 107, 0.18);
+            background: rgba(199, 255, 107, 0.12);
+            color: var(--accent);
+            cursor: pointer;
+            transition: 0.22s ease;
+            font: inherit;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-1px);
+            background: rgba(199, 255, 107, 0.18);
+        }
+
+        /* Test mode button */
+        .btn-test-pay {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.65rem 1.3rem;
+            border-radius: 999px;
+            border: 1px solid rgba(121, 242, 170, 0.2);
+            background: rgba(121, 242, 170, 0.1);
+            color: var(--success);
+            cursor: pointer;
+            transition: 0.22s ease;
+            font: inherit;
+            font-size: 0.88rem;
+        }
+
+        .btn-test-pay:hover {
+            transform: translateY(-1px);
+            background: rgba(121, 242, 170, 0.16);
+        }
+
+        .loading-state {
+            padding: 4rem 1.5rem;
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        .loading-spinner {
+            width: 42px;
+            height: 42px;
+            margin: 0 auto 1rem;
+            border-radius: 999px;
+            border: 3px solid rgba(199, 255, 107, 0.12);
+            border-top-color: var(--accent);
+            animation: spin 0.9s linear infinite;
+        }
+
+        @media (max-width: 720px) {
+            .site-header-inner { min-height: 68px; }
+            .pay-body { padding: 1.5rem 1rem; }
+            .order-info { grid-template-columns: 1fr; gap: 0.3rem 0; }
+            .order-info-value { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+<header class="site-header">
+    <div class="site-header-inner">
+        <a href="/" class="back-link">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            返回首页
+        </a>
+        <a href="/" class="logo">
+            <span class="logo-mark">></span>
+            <span class="logo-text">数字商店</span>
+        </a>
+    </div>
+</header>
+
+<div class="page-shell" id="app">
+    <div class="terminal-window">
+        <div class="window-bar">
+            <div class="window-controls">
+                <span class="window-dot"></span>
+                <span class="window-dot"></span>
+                <span class="window-dot"></span>
+            </div>
+            <div class="window-title">payment-loader</div>
+        </div>
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <div>加载订单信息...</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+const API = window.location.origin + '/api';
+const orderNo = location.pathname.split('/payment/')[1]?.replace(/\/$/, '') || '';
+
+let orderData = null;
+let timerInterval = null;
+let pollInterval = null;
+let expireTime = null;
+
+async function init() {
+    if (!orderNo) {
+        showError('缺少订单号');
+        return;
+    }
+
+    // Get order info from sessionStorage (set by product page on submit)
+    const stored = sessionStorage.getItem('pendingOrder');
+    if (stored) {
+        try {
+            orderData = JSON.parse(stored);
+            sessionStorage.removeItem('pendingOrder');
+        } catch (e) {}
+    }
+
+    // Also fetch from API for status
+    try {
+        const res = await fetch(`${API}/orders/status/${orderNo}`);
+        if (!res.ok) throw new Error('订单不存在');
+        const apiData = await res.json();
+
+        if (apiData.status === 'paid') {
+            renderSuccess(apiData);
+            return;
+        }
+
+        if (!orderData) {
+            orderData = apiData;
+        }
+
+        renderPayment();
+    } catch (e) {
+        showError(e.message || '加载订单失败');
+    }
+}
+
+function renderPayment() {
+    expireTime = Date.now() + 30 * 60 * 1000; // 30 minutes
+    const isTest = orderData.isTestMode;
+    const payUrl = orderData.payUrl || orderData.codeUrl || '';
+
+    document.getElementById('app').innerHTML = `
+        <!-- Steps bar: step 2 active -->
+        <div class="steps-bar">
+            <div class="step-item">
+                <div class="step-circle done">&#10003;</div>
+                <span class="step-label done">创建订单</span>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step-item">
+                <div class="step-circle active">2</div>
+                <span class="step-label active">扫码支付</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item">
+                <div class="step-circle">3</div>
+                <span class="step-label">获取卡密</span>
+            </div>
+        </div>
+
+        <div class="terminal-window">
+            <div class="window-bar">
+                <div class="window-controls">
+                    <span class="window-dot"></span>
+                    <span class="window-dot"></span>
+                    <span class="window-dot"></span>
+                </div>
+                <div class="window-title">payment-gateway</div>
+            </div>
+            <div class="pay-body">
+                <div class="pay-title">扫码支付</div>
+
+                <div class="order-info">
+                    <span class="order-info-label">订单号:</span>
+                    <span class="order-info-value">${orderNo}</span>
+                    <span class="order-info-label">商品:</span>
+                    <span class="order-info-value">${escHtml(orderData.productName || '')}</span>
+                    <span class="order-info-label">金额:</span>
+                    <span class="order-info-value amount">¥${parseFloat(orderData.amount || 0).toFixed(2)}</span>
+                </div>
+
+                <div class="qr-area" id="qrArea">
+                    ${isTest
+                        ? '<div style="padding:2rem;color:#333;font-size:0.88rem;">测试模式<br>无需扫码</div>'
+                        : '<canvas id="qrCanvas"></canvas>'}
+                </div>
+                <p class="qr-hint">${isTest ? '测试环境，点击下方按钮模拟支付' : '请使用微信或支付宝扫码支付'}</p>
+
+                ${isTest ? `<button class="btn-test-pay" onclick="testPay()">模拟支付成功</button>` : ''}
+
+                <div style="margin-top:1.2rem;">
+                    <div class="timer-bar" id="timerBar">
+                        <span>&#9201;</span>
+                        <span>订单将在 <span id="countdown">30:00</span> 后过期</span>
+                    </div>
+                </div>
+
+                <div class="status-msg" id="statusMsg">
+                    <div class="spinner"></div>
+                    <span>等待支付中...</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Generate QR code if not test mode
+    if (!isTest && payUrl) {
+        const canvas = document.getElementById('qrCanvas');
+        if (canvas && typeof QRCode !== 'undefined') {
+            QRCode.toCanvas(canvas, payUrl, { width: 220, margin: 2 });
+        }
+    }
+
+    startTimer();
+    startPolling();
+}
+
+function renderSuccess(data) {
+    const d = data || orderData;
+    document.getElementById('app').innerHTML = `
+        <!-- Steps bar: all done -->
+        <div class="steps-bar">
+            <div class="step-item">
+                <div class="step-circle done">&#10003;</div>
+                <span class="step-label done">创建订单</span>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step-item">
+                <div class="step-circle done">&#10003;</div>
+                <span class="step-label done">扫码支付</span>
+            </div>
+            <div class="step-line done"></div>
+            <div class="step-item">
+                <div class="step-circle done">&#10003;</div>
+                <span class="step-label done">获取卡密</span>
+            </div>
+        </div>
+
+        <div class="terminal-window">
+            <div class="window-bar">
+                <div class="window-controls">
+                    <span class="window-dot"></span>
+                    <span class="window-dot"></span>
+                    <span class="window-dot"></span>
+                </div>
+                <div class="window-title">payment-success</div>
+            </div>
+            <div class="success-panel">
+                <div class="success-icon">&#10003;</div>
+                <div class="success-title">支付成功！</div>
+                <p class="success-sub">卡密已发送到您的邮箱，请注意查收。</p>
+
+                <div class="order-info" style="margin-bottom:1.5rem;">
+                    <span class="order-info-label">订单号:</span>
+                    <span class="order-info-value">${orderNo}</span>
+                    <span class="order-info-label">商品:</span>
+                    <span class="order-info-value">${escHtml(d?.productName || '')}</span>
+                    <span class="order-info-label">金额:</span>
+                    <span class="order-info-value amount">¥${parseFloat(d?.amount || 0).toFixed(2)}</span>
+                </div>
+
+                <button class="btn-home" onclick="location.href='/'">返回首页</button>
+            </div>
+        </div>
+    `;
+
+    stopTimers();
+}
+
+function startTimer() {
+    timerInterval = setInterval(() => {
+        const remaining = Math.max(0, expireTime - Date.now());
+        const min = Math.floor(remaining / 60000);
+        const sec = Math.floor((remaining % 60000) / 1000);
+        const el = document.getElementById('countdown');
+        const bar = document.getElementById('timerBar');
+        if (el) el.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+
+        if (remaining <= 0) {
+            if (bar) bar.classList.add('expired');
+            if (el) el.textContent = '已过期';
+            const msg = document.getElementById('statusMsg');
+            if (msg) msg.innerHTML = '<span style="color:var(--danger);">订单已过期，请重新下单</span>';
+            stopTimers();
+        }
+    }, 1000);
+}
+
+function startPolling() {
+    pollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`${API}/orders/status/${orderNo}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.status === 'paid') {
+                renderSuccess(data);
+            }
+        } catch (e) {}
+    }, 3000);
+}
+
+function stopTimers() {
+    if (timerInterval) clearInterval(timerInterval);
+    if (pollInterval) clearInterval(pollInterval);
+}
+
+async function testPay() {
+    const btn = document.querySelector('.btn-test-pay');
+    if (btn) { btn.disabled = true; btn.textContent = '处理中...'; }
+
+    try {
+        const res = await fetch(`${API}/orders/test-pay/${orderNo}`);
+        // Test pay endpoint returns HTML, but we just need to trigger it
+        // Then poll will catch the status change
+        setTimeout(async () => {
+            const statusRes = await fetch(`${API}/orders/status/${orderNo}`);
+            if (statusRes.ok) {
+                const data = await statusRes.json();
+                if (data.status === 'paid') {
+                    renderSuccess(data);
+                }
+            }
+        }, 1000);
+    } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = '模拟支付成功'; }
+    }
+}
+
+function showError(msg) {
+    document.getElementById('app').innerHTML = `
+        <div class="terminal-window">
+            <div class="window-bar">
+                <div class="window-controls">
+                    <span class="window-dot"></span>
+                    <span class="window-dot"></span>
+                    <span class="window-dot"></span>
+                </div>
+                <div class="window-title">error.log</div>
+            </div>
+            <div class="loading-state">
+                <div style="font-size:2.2rem;margin-bottom:0.8rem;">!</div>
+                <div style="color:var(--text);font-size:1rem;margin-bottom:0.5rem;">${escHtml(msg)}</div>
+                <a href="/" style="color:var(--accent);">返回首页</a>
+            </div>
+        </div>`;
+}
+
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+
+init();
+</script>
+</body>
+</html>
