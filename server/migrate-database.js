@@ -60,7 +60,37 @@ async function migrate() {
         )
     `, '创建 price_tiers 阶梯定价表');
 
-    // 5. 同步已有订单的 sold_count（从历史订单反算）
+    // 5. products 表：添加 delivery_type（交付方式）
+    await safeRun(
+        `ALTER TABLE products ADD COLUMN delivery_type TEXT DEFAULT 'email'`,
+        'products 表添加 delivery_type 字段'
+    );
+
+    // 6. orders 表：添加 chatgpt_token（自动充值用）
+    await safeRun(
+        `ALTER TABLE orders ADD COLUMN chatgpt_token TEXT`,
+        'orders 表添加 chatgpt_token 字段'
+    );
+
+    // 7. orders 表：添加 recharge_task_id（ifaka 充值任务 ID）
+    await safeRun(
+        `ALTER TABLE orders ADD COLUMN recharge_task_id TEXT`,
+        'orders 表添加 recharge_task_id 字段'
+    );
+
+    // 8. orders 表：添加 recharge_status（充值状态）
+    await safeRun(
+        `ALTER TABLE orders ADD COLUMN recharge_status TEXT`,
+        'orders 表添加 recharge_status 字段'
+    );
+
+    // 9. orders 表：添加 paid_at（支付时间）
+    await safeRun(
+        `ALTER TABLE orders ADD COLUMN paid_at DATETIME`,
+        'orders 表添加 paid_at 字段'
+    );
+
+    // 10. 同步已有订单的 sold_count（从历史订单反算）
     await safeRun(`
         UPDATE products
         SET sold_count = (

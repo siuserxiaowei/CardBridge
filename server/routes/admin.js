@@ -1,6 +1,7 @@
 const express = require('express');
 const { dbGet, dbAll, dbRun } = require('../utils/database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { processPaymentSuccess } = require('./orders');
 
 const router = express.Router();
 
@@ -14,16 +15,16 @@ router.use(authenticateToken, requireAdmin);
 // 添加商品
 router.post('/products', async (req, res) => {
     try {
-        const { name, description, price } = req.body;
+        const { name, description, price, delivery_type } = req.body;
 
         if (!name || !price) {
             return res.status(400).json({ error: '商品名称和价格不能为空' });
         }
 
         const result = await dbRun(`
-            INSERT INTO products (name, description, price, stock, status)
-            VALUES (?, ?, ?, 0, 'out_of_stock')
-        `, [name, description, price]);
+            INSERT INTO products (name, description, price, stock, status, delivery_type)
+            VALUES (?, ?, ?, 0, 'out_of_stock', ?)
+        `, [name, description, price, delivery_type || 'email']);
 
         res.status(201).json({
             message: '商品添加成功',
@@ -39,13 +40,13 @@ router.post('/products', async (req, res) => {
 router.put('/products/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, price, status } = req.body;
+        const { name, description, price, status, delivery_type } = req.body;
 
         await dbRun(`
             UPDATE products
-            SET name = ?, description = ?, price = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            SET name = ?, description = ?, price = ?, status = ?, delivery_type = COALESCE(?, delivery_type), updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        `, [name, description, price, status, id]);
+        `, [name, description, price, status, delivery_type || null, id]);
 
         res.json({ message: '商品更新成功' });
     } catch (error) {
@@ -189,20 +190,58 @@ router.get('/orders', async (req, res) => {
         const orders = await dbAll(`
             SELECT
                 o.*,
-                u.email,
+                COALESCE(u.email, o.buyer_email) as email,
                 p.name as product_name,
                 c.card_number
             FROM orders o
-            JOIN users u ON o.user_id = u.id
+            LEFT JOIN users u ON o.user_id = u.id AND o.user_id != 0
             JOIN products p ON o.product_id = p.id
             LEFT JOIN cards c ON o.card_id = c.id
-            ORDER BY o.created_at DESC
+            ORDER BY
+                CASE WHEN o.payment_status = 'confirming' THEN 0 ELSE 1 END,
+                o.created_at DESC
         `);
 
         res.json(orders);
     } catch (error) {
         console.error('查询订单错误:', error);
         res.status(500).json({ error: '查询订单失败' });
+    }
+});
+
+// 确认收款（手动收款模式）
+router.post('/orders/:id/confirm', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const order = await dbGet('SELECT * FROM orders WHERE id = ?', [id]);
+
+        if (!order) {
+            return res.status(404).json({ error: '订单不存在' });
+        }
+        if (order.payment_status === 'paid') {
+            return res.json({ message: '订单已完成' });
+        }
+
+        await processPaymentSuccess(order.id, order.transaction_id);
+        res.json({ message: '已确认收款，卡密已自动发送' });
+    } catch (error) {
+        console.error('确认收款错误:', error);
+        res.status(500).json({ error: '确认收款失败' });
+    }
+});
+
+// 拒绝订单
+router.post('/orders/:id/reject', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await dbRun(
+            "UPDATE orders SET payment_status = 'cancelled' WHERE id = ?",
+            [id]
+        );
+        res.json({ message: '订单已拒绝' });
+    } catch (error) {
+        console.error('拒绝订单错误:', error);
+        res.status(500).json({ error: '操作失败' });
     }
 });
 

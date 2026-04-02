@@ -54,6 +54,7 @@ async function initDatabase() {
                     stock INTEGER DEFAULT 0,
                     sold_count INTEGER DEFAULT 0,
                     status TEXT DEFAULT 'in_stock',
+                    delivery_type TEXT DEFAULT 'email',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -99,6 +100,9 @@ async function initDatabase() {
                     payment_status TEXT DEFAULT 'pending',
                     transaction_id TEXT,
                     card_id INTEGER,
+                    chatgpt_token TEXT,
+                    recharge_task_id TEXT,
+                    recharge_status TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     paid_at DATETIME,
                     FOREIGN KEY (product_id) REFERENCES products(id),
@@ -167,19 +171,22 @@ async function insertDefaultData() {
             name: 'ChatGPT Plus 全功能独享账号',
             description: '全功能 GPT-4 访问权限，独享账号无需共享，支持官方所有功能，稳定可靠，即买即用。',
             price: 40.00,
-            stock: 0
+            stock: 0,
+            delivery_type: 'auto_recharge'
         },
         {
             name: '[普号] Claude > 长效微软邮箱',
             description: '长期有效的微软邮箱账号，可直接注册 Claude 等服务，稳定性高，性价比之选。',
             price: 10.00,
-            stock: 0
+            stock: 0,
+            delivery_type: 'email'
         },
         {
             name: '谷歌长效手机接码 - 美区号',
             description: '美国区域手机号码，支持接收验证码，适用于谷歌、Twitter 等平台注册验证。',
             price: 5.00,
-            stock: 0
+            stock: 0,
+            delivery_type: 'email'
         }
     ];
 
@@ -195,7 +202,7 @@ async function insertDefaultData() {
     });
 
     if (row.count === 0) {
-        const stmt = db.prepare('INSERT INTO products (name, description, price, stock, status) VALUES (?, ?, ?, ?, ?)');
+        const stmt = db.prepare('INSERT INTO products (name, description, price, stock, status, delivery_type) VALUES (?, ?, ?, ?, ?, ?)');
         for (const product of sampleProducts) {
             await new Promise((resolve) => {
                 stmt.run(
@@ -204,6 +211,7 @@ async function insertDefaultData() {
                     product.price,
                     product.stock,
                     product.stock > 0 ? 'in_stock' : 'out_of_stock',
+                    product.delivery_type || 'email',
                     resolve
                 );
             });

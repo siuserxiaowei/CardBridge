@@ -14,13 +14,14 @@
  */
 async function createAlipayOrder(orderInfo) {
     try {
-        // 检查是否配置了支付宝
+        // 检查是否配置了支付宝 SDK
         if (!process.env.ALIPAY_APP_ID || process.env.ALIPAY_APP_ID === 'your_alipay_app_id') {
-            console.log('⚠️  支付宝未配置，使用测试模式');
+            console.log('⚠️  支付宝未配置 SDK，使用手动收款模式');
             return {
-                isTestMode: true,
-                payUrl: `/api/orders/test-pay/${orderInfo.orderId}`,
-                message: '测试模式：点击此链接模拟支付成功'
+                manualMode: true,
+                qrImage: process.env.ALIPAY_PAY_QR || '/images/alipay-pay.svg',
+                contactInfo: process.env.CONTACT_INFO || '',
+                message: '请使用支付宝扫码转账'
             };
         }
 
@@ -99,13 +100,14 @@ async function verifyAlipayCallback(params) {
  */
 async function createWechatOrder(orderInfo) {
     try {
-        // 检查是否配置了微信支付
+        // 检查是否配置了微信支付 SDK
         if (!process.env.WECHAT_MCHID || process.env.WECHAT_MCHID === 'your_merchant_id') {
-            console.log('⚠️  微信支付未配置，使用测试模式');
+            console.log('⚠️  微信支付未配置 SDK，使用手动收款模式');
             return {
-                isTestMode: true,
-                codeUrl: `/api/orders/test-pay/${orderInfo.orderId}`,
-                message: '测试模式：点击此链接模拟支付成功'
+                manualMode: true,
+                qrImage: process.env.WECHAT_PAY_QR || '/images/wechat-pay.svg',
+                contactInfo: process.env.CONTACT_INFO || '',
+                message: '请使用微信扫码转账'
             };
         }
 

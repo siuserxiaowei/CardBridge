@@ -17,6 +17,7 @@ router.get('/', async (req, res) => {
                 p.stock,
                 p.sold_count,
                 p.status,
+                p.delivery_type,
                 COUNT(c.id) as available_cards
             FROM products p
             LEFT JOIN cards c ON p.id = c.product_id AND c.status = 'available'
