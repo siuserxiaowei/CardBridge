@@ -346,19 +346,7 @@ async function viewMyOrders() {
 // 工具函数
 // ============================================
 function getProductCardTheme(product, index) {
-    const seed = String(product?.id ?? `${index}-${product?.name || 'product'}`);
-    const themeIndex = hashString(seed) % PRODUCT_CARD_THEMES.length;
-    return PRODUCT_CARD_THEMES[themeIndex];
-}
-
-function hashString(value) {
-    let hash = 0;
-
-    for (const char of value) {
-        hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
-    }
-
-    return Math.abs(hash);
+    return PRODUCT_CARD_THEMES[index % PRODUCT_CARD_THEMES.length];
 }
 
 function escapeHtml(text) {
