@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadStats();
     loadProducts();
     loadOrders();
+    loadCDKList();
     setupEventListeners();
 });
 
@@ -352,6 +353,135 @@ async function rejectOrder(orderId) {
     } catch (error) {
         console.error('拒绝订单失败:', error);
         alert('操作失败，请重试');
+    }
+}
+
+// ============================================
+// CDK 管理
+// ============================================
+
+// 加载 CDK 列表
+async function loadCDKList() {
+    try {
+        const token = localStorage.getItem('token');
+        const type = document.getElementById('cdkFilterType')?.value || 'all';
+        const status = document.getElementById('cdkFilterStatus')?.value || 'all';
+
+        const res = await fetch(`${API_BASE}/admin/cdk-list?type=${type}&status=${status}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const cards = await res.json();
+
+        const tbody = document.querySelector('#cdkTable tbody');
+        if (!cards.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="loading">暂无 CDK</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = cards.map(c => {
+            const masked = c.card_number.substring(0, 4) + '************' + (c.card_number.length > 4 ? '' : '');
+            const typeLabel = c.card_type === 'yearly'
+                ? '<span class="badge" style="background:rgba(168,85,247,0.15);color:#a855f7;border-color:rgba(168,85,247,0.3);">年卡</span>'
+                : '<span class="badge" style="background:rgba(59,130,246,0.15);color:#3b82f6;border-color:rgba(59,130,246,0.3);">月卡</span>';
+            const statusLabel = c.status === 'available'
+                ? '<span class="badge badge-success">可用</span>'
+                : '<span class="badge badge-danger">已用</span>';
+            return `<tr>
+                <td>${c.id}</td>
+                <td>
+                    <span id="cdk-masked-${c.id}">${escapeHtml(masked)}</span>
+                    <span id="cdk-full-${c.id}" style="display:none;">${escapeHtml(c.card_number)}</span>
+                    <a href="#" onclick="toggleCDK(${c.id});return false;" style="color:#a855f7;font-size:0.8rem;margin-left:4px;" id="cdk-toggle-${c.id}">显示</a>
+                </td>
+                <td>${typeLabel}</td>
+                <td>${statusLabel}</td>
+                <td>${c.order_no || '-'}</td>
+                <td>${c.used_at || c.sold_at || '-'}</td>
+                <td style="color:${c.error_info ? '#ef4444' : '#94a3b8'};font-size:0.82rem;">${c.error_info || '-'}</td>
+                <td>${c.created_at ? new Date(c.created_at).toLocaleString() : '-'}</td>
+                <td>${c.status === 'available' ? `<button class="btn" style="padding:0.4rem 0.8rem;font-size:0.8rem;background:#dc2626;" onclick="deleteCDK(${c.id})">删除</button>` : ''}</td>
+            </tr>`;
+        }).join('');
+
+        // 更新导入面板的商品下拉
+        populateCDKProductSelect();
+    } catch (e) {
+        console.error('加载CDK列表失败:', e);
+    }
+}
+
+function toggleCDK(id) {
+    const masked = document.getElementById(`cdk-masked-${id}`);
+    const full = document.getElementById(`cdk-full-${id}`);
+    const toggle = document.getElementById(`cdk-toggle-${id}`);
+    if (masked.style.display !== 'none') {
+        masked.style.display = 'none';
+        full.style.display = 'inline';
+        toggle.textContent = '隐藏';
+    } else {
+        masked.style.display = 'inline';
+        full.style.display = 'none';
+        toggle.textContent = '显示';
+    }
+}
+
+async function populateCDKProductSelect() {
+    const select = document.getElementById('cdkImportProduct');
+    if (!select || select.options.length > 1) return;
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/products`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const products = await res.json();
+        select.innerHTML = products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    } catch (e) {}
+}
+
+async function importCDK() {
+    const text = document.getElementById('cdkImportText').value.trim();
+    const type = document.getElementById('cdkImportType').value;
+    const productId = document.getElementById('cdkImportProduct').value;
+
+    if (!text) { alert('请输入 CDK'); return; }
+    if (!productId) { alert('请选择商品'); return; }
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/admin/cards`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ productId, cdkList: text, cardType: type })
+        });
+        const data = await res.json();
+
+        if (!res.ok) { alert(data.error || '导入失败'); return; }
+
+        alert(data.message);
+        document.getElementById('cdkImportText').value = '';
+        loadCDKList();
+        loadProducts();
+        loadStats();
+    } catch (e) {
+        alert('导入失败，请重试');
+    }
+}
+
+async function deleteCDK(id) {
+    if (!confirm('确定要删除这个 CDK 吗？')) return;
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/admin/cards/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            loadCDKList();
+            loadProducts();
+        } else {
+            const data = await res.json();
+            alert(data.error || '删除失败');
+        }
+    } catch (e) {
+        alert('删除失败');
     }
 }
 

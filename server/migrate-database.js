@@ -90,7 +90,25 @@ async function migrate() {
         'orders 表添加 paid_at 字段'
     );
 
-    // 10. 同步已有订单的 sold_count（从历史订单反算）
+    // 10. cards 表：添加 card_type（CDK 类型：月卡/年卡）
+    await safeRun(
+        `ALTER TABLE cards ADD COLUMN card_type TEXT DEFAULT 'monthly'`,
+        'cards 表添加 card_type 字段'
+    );
+
+    // 11. cards 表：添加 error_info（充值失败原因）
+    await safeRun(
+        `ALTER TABLE cards ADD COLUMN error_info TEXT`,
+        'cards 表添加 error_info 字段'
+    );
+
+    // 12. cards 表：添加 used_at（使用时间）
+    await safeRun(
+        `ALTER TABLE cards ADD COLUMN used_at DATETIME`,
+        'cards 表添加 used_at 字段'
+    );
+
+    // 13. 同步已有订单的 sold_count（从历史订单反算）
     await safeRun(`
         UPDATE products
         SET sold_count = (

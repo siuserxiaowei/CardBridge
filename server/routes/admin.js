@@ -79,51 +79,87 @@ router.delete('/products/:id', async (req, res) => {
 // 卡密管理
 // ============================================
 
-// 批量添加卡密
+// 批量添加卡密（兼容旧格式 + 新 CDK 导入）
 router.post('/cards', async (req, res) => {
     try {
-        const { productId, cards } = req.body;
+        const { productId, cards, cdkList, cardType } = req.body;
 
+        // 新 CDK 导入模式：cdkList 是换行分隔的字符串
+        if (cdkList && productId) {
+            const product = await dbGet('SELECT * FROM products WHERE id = ?', [productId]);
+            if (!product) return res.status(404).json({ error: '商品不存在' });
+
+            const lines = cdkList.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length === 0) return res.status(400).json({ error: '请输入 CDK' });
+
+            const type = cardType || 'monthly';
+            let successCount = 0;
+            for (const line of lines) {
+                try {
+                    await dbRun(
+                        'INSERT INTO cards (product_id, card_number, card_password, status, card_type) VALUES (?, ?, ?, "available", ?)',
+                        [productId, line, '', type]
+                    );
+                    successCount++;
+                } catch (e) {
+                    console.error('插入CDK失败:', line, e.message);
+                }
+            }
+
+            // 更新库存
+            const stockResult = await dbGet(`SELECT COUNT(*) as count FROM cards WHERE product_id = ? AND status = 'available'`, [productId]);
+            await dbRun(`UPDATE products SET stock = ?, status = ? WHERE id = ?`, [stockResult.count, stockResult.count > 0 ? 'in_stock' : 'out_of_stock', productId]);
+
+            return res.json({ message: `成功导入 ${successCount} 个 CDK`, successCount, totalCount: lines.length });
+        }
+
+        // 旧格式：cards 数组
         if (!productId || !Array.isArray(cards) || cards.length === 0) {
             return res.status(400).json({ error: '参数错误' });
         }
 
-        // 检查商品是否存在
         const product = await dbGet('SELECT * FROM products WHERE id = ?', [productId]);
-        if (!product) {
-            return res.status(404).json({ error: '商品不存在' });
-        }
+        if (!product) return res.status(404).json({ error: '商品不存在' });
 
-        // 批量插入卡密
-        const stmt = 'INSERT INTO cards (product_id, card_number, card_password, status) VALUES (?, ?, ?, "available")';
         let successCount = 0;
-
         for (const card of cards) {
             try {
-                await dbRun(stmt, [productId, card.number, card.password || '']);
+                await dbRun(
+                    'INSERT INTO cards (product_id, card_number, card_password, status, card_type) VALUES (?, ?, ?, "available", ?)',
+                    [productId, card.number, card.password || '', cardType || 'monthly']
+                );
                 successCount++;
             } catch (error) {
                 console.error('插入卡密失败:', card, error);
             }
         }
 
-        // 更新商品库存
-        const stockResult = await dbGet(`
-            SELECT COUNT(*) as count FROM cards WHERE product_id = ? AND status = 'available'
-        `, [productId]);
+        const stockResult = await dbGet(`SELECT COUNT(*) as count FROM cards WHERE product_id = ? AND status = 'available'`, [productId]);
+        await dbRun(`UPDATE products SET stock = ?, status = ? WHERE id = ?`, [stockResult.count, stockResult.count > 0 ? 'in_stock' : 'out_of_stock', productId]);
 
-        await dbRun(`
-            UPDATE products SET stock = ?, status = ? WHERE id = ?
-        `, [stockResult.count, stockResult.count > 0 ? 'in_stock' : 'out_of_stock', productId]);
-
-        res.json({
-            message: `成功添加 ${successCount} 张卡密`,
-            successCount,
-            totalCount: cards.length
-        });
+        res.json({ message: `成功添加 ${successCount} 张卡密`, successCount, totalCount: cards.length });
     } catch (error) {
         console.error('添加卡密错误:', error);
         res.status(500).json({ error: '添加卡密失败' });
+    }
+});
+
+// CDK 列表（支持按类型、状态筛选）
+router.get('/cdk-list', async (req, res) => {
+    try {
+        const { type, status } = req.query;
+        let sql = `SELECT c.*, o.transaction_id as order_no FROM cards c LEFT JOIN orders o ON c.order_id = o.id WHERE 1=1`;
+        const params = [];
+
+        if (type && type !== 'all') { sql += ' AND c.card_type = ?'; params.push(type); }
+        if (status && status !== 'all') { sql += ' AND c.status = ?'; params.push(status); }
+
+        sql += ' ORDER BY c.created_at DESC LIMIT 200';
+        const cards = await dbAll(sql, params);
+        res.json(cards);
+    } catch (error) {
+        console.error('查询CDK列表错误:', error);
+        res.status(500).json({ error: '查询失败' });
     }
 });
 

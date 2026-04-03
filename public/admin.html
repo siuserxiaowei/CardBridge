@@ -282,6 +282,61 @@
             </table>
         </div>
 
+        <!-- CDK 管理 -->
+        <div class="section">
+            <div class="section-title">CDK 管理</div>
+
+            <!-- 导入 CDK -->
+            <div style="background:#0f172a;border-radius:8px;padding:1.5rem;margin-bottom:1.5rem;border:1px solid rgba(148,163,184,0.1);">
+                <h3 style="font-size:1rem;margin-bottom:1rem;">导入 CDK</h3>
+                <textarea id="cdkImportText" class="form-textarea" placeholder="请输入 CDK 卡密，每行一个（16位字母数字）例如：ABCD1234EFGH5678" style="min-height:120px;margin-bottom:0.75rem;"></textarea>
+                <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                    <span style="color:#94a3b8;font-size:0.82rem;">格式: 16位字母数字，不区分大小写</span>
+                    <span style="color:#94a3b8;font-size:0.82rem;">导入类型:</span>
+                    <select id="cdkImportType" class="form-input" style="width:auto;padding:0.5rem 1rem;">
+                        <option value="monthly">月卡</option>
+                        <option value="yearly">年卡</option>
+                    </select>
+                    <span style="color:#94a3b8;font-size:0.82rem;">商品:</span>
+                    <select id="cdkImportProduct" class="form-input" style="width:auto;padding:0.5rem 1rem;"></select>
+                    <button class="btn" onclick="importCDK()" style="margin-left:auto;">导入 CDK</button>
+                </div>
+            </div>
+
+            <!-- CDK 列表 -->
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+                <span style="font-weight:600;">CDK 列表</span>
+                <select id="cdkFilterType" class="form-input" style="width:auto;padding:0.4rem 0.8rem;font-size:0.82rem;" onchange="loadCDKList()">
+                    <option value="all">全部类型</option>
+                    <option value="monthly">月卡</option>
+                    <option value="yearly">年卡</option>
+                </select>
+                <select id="cdkFilterStatus" class="form-input" style="width:auto;padding:0.4rem 0.8rem;font-size:0.82rem;" onchange="loadCDKList()">
+                    <option value="all">全部状态</option>
+                    <option value="available">可用</option>
+                    <option value="sold">已用</option>
+                </select>
+            </div>
+            <table id="cdkTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>CDK 卡密</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>订单</th>
+                        <th>使用时间</th>
+                        <th>错误信息</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="9" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- 订单管理 -->
         <div class="section">
             <div class="section-title">订单管理</div>
