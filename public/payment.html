@@ -443,11 +443,35 @@
 <script>
 const API = window.location.origin + '/api';
 const orderNo = location.pathname.split('/payment/')[1]?.replace(/\/$/, '') || '';
+const urlState = new URL(window.location.href);
 
 let orderData = null;
 let timerInterval = null;
 let pollInterval = null;
 let expireTime = null;
+let accessToken = urlState.searchParams.get('t') || '';
+
+function syncAccessTokenInUrl() {
+    if (!accessToken) return;
+
+    const nextUrl = new URL(window.location.href);
+    if (nextUrl.searchParams.get('t') === accessToken) return;
+
+    nextUrl.searchParams.set('t', accessToken);
+    history.replaceState(null, '', `${nextUrl.pathname}${nextUrl.search}`);
+}
+
+function buildApiUrl(path) {
+    const url = new URL(`${API}${path}`, window.location.origin);
+    if (accessToken) {
+        url.searchParams.set('t', accessToken);
+    }
+    return url.toString();
+}
+
+function buildSecureOrderUrl() {
+    return `/order/${encodeURIComponent(orderNo)}?t=${encodeURIComponent(accessToken)}`;
+}
 
 async function init() {
     if (!orderNo) {
@@ -461,22 +485,44 @@ async function init() {
         try {
             orderData = JSON.parse(stored);
             sessionStorage.removeItem('pendingOrder');
+            if (!accessToken && orderData?.accessToken) {
+                accessToken = orderData.accessToken;
+            }
         } catch (e) {}
     }
 
+    if (!accessToken) {
+        showError('订单链接缺少访问令牌，请返回商品页重新下单，或通过订单查询页查看订单。');
+        return;
+    }
+
+    syncAccessTokenInUrl();
+
     // Also fetch from API for status
     try {
-        const res = await fetch(`${API}/orders/status/${orderNo}`);
-        if (!res.ok) throw new Error('订单不存在');
+        const res = await fetch(buildApiUrl(`/orders/status/${encodeURIComponent(orderNo)}`));
         const apiData = await res.json();
+        if (!res.ok) throw new Error(apiData.error || '订单不存在');
+
+        orderData = { ...(orderData || {}), ...apiData, accessToken };
 
         if (apiData.status === 'paid') {
-            renderSuccess(apiData);
+            if (apiData.deliveryType !== 'auto_recharge') {
+                window.location.href = buildSecureOrderUrl();
+                return;
+            }
+            renderSuccess(orderData);
             return;
         }
 
-        if (!orderData) {
-            orderData = apiData;
+        if (apiData.status === 'expired') {
+            showError('订单已过期，请重新下单');
+            return;
+        }
+
+        if (apiData.status === 'cancelled') {
+            showError('订单已取消');
+            return;
         }
 
         renderPayment();
@@ -488,14 +534,15 @@ async function init() {
 let activeMethod = 'wechat'; // current display method
 
 function renderPayment() {
-    expireTime = Date.now() + 30 * 60 * 1000; // 30 minutes
+    stopTimers();
+    expireTime = orderData?.expiresAt ? new Date(orderData.expiresAt).getTime() : Date.now() + 30 * 60 * 1000;
     const isManual = orderData.manualMode;
     const payUrl = orderData.payUrl || orderData.codeUrl || '';
     const contactInfo = orderData.contactInfo || '';
 
     function getQrForMethod(method) {
         if (!isManual) return { qrHtml: payUrl ? '<canvas id="qrCanvas"></canvas>' : '<div style="padding:2rem;color:#333;font-size:0.88rem;">暂无收款码</div>', hint: '请扫码支付' };
-        const qrImg = method === 'alipay' ? '/images/alipay-pay.svg' : '/images/wechat-pay.svg';
+        const qrImg = method === 'alipay' ? '/images/alipay-pay.jpg' : '/images/wechat-pay.jpg';
         const label = method === 'alipay' ? '支付宝' : '微信';
         return {
             qrHtml: `<img src="${qrImg}" alt="${label}收款码" style="width:100%;height:auto;">`,
@@ -597,8 +644,6 @@ function renderPayment() {
 function switchMethod(method) {
     activeMethod = method;
     renderPayment();
-    startTimer();
-    startPolling();
 }
 
 function renderSuccess(data) {
@@ -688,16 +733,24 @@ function startTimer() {
 function startPolling() {
     pollInterval = setInterval(async () => {
         try {
-            const res = await fetch(`${API}/orders/status/${orderNo}`);
+            const res = await fetch(buildApiUrl(`/orders/status/${encodeURIComponent(orderNo)}`));
             if (!res.ok) return;
             const data = await res.json();
             if (data.status === 'paid') {
                 stopTimers();
-                window.location.href = `/order/${orderNo}`;
+                if (data.deliveryType === 'auto_recharge') {
+                    renderSuccess({ ...orderData, ...data });
+                    return;
+                }
+                window.location.href = buildSecureOrderUrl();
                 return;
             } else if (data.status === 'confirming') {
                 const msg = document.getElementById('statusMsg');
                 if (msg) msg.innerHTML = '<span style="color:var(--warn);">已提交，等待卖家确认收款...</span>';
+            } else if (data.status === 'expired') {
+                const msg = document.getElementById('statusMsg');
+                if (msg) msg.innerHTML = '<span style="color:var(--danger);">订单已过期，请重新下单</span>';
+                stopTimers();
             } else if (data.status === 'cancelled') {
                 const msg = document.getElementById('statusMsg');
                 if (msg) msg.innerHTML = '<span style="color:var(--danger);">订单已取消</span>';
@@ -715,7 +768,7 @@ function stopTimers() {
 async function pollRechargeStatus() {
     const rechargePoll = setInterval(async () => {
         try {
-            const res = await fetch(`${API}/orders/recharge-status/${orderNo}`);
+            const res = await fetch(buildApiUrl(`/orders/recharge-status/${encodeURIComponent(orderNo)}`));
             if (!res.ok) return;
             const data = await res.json();
             const area = document.getElementById('rechargeStatusArea');
@@ -737,10 +790,18 @@ async function markPaid() {
     if (btn) { btn.disabled = true; btn.textContent = '提交中...'; }
 
     try {
-        const res = await fetch(`${API}/orders/mark-paid/${orderNo}`, { method: 'POST' });
+        const res = await fetch(buildApiUrl(`/orders/mark-paid/${encodeURIComponent(orderNo)}`), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken })
+        });
         const data = await res.json();
 
         if (res.ok) {
+            if (data.expiresAt) {
+                orderData.expiresAt = data.expiresAt;
+                expireTime = new Date(data.expiresAt).getTime();
+            }
             if (btn) { btn.textContent = '已提交，等待确认'; btn.style.opacity = '0.6'; }
             const msg = document.getElementById('statusMsg');
             if (msg) msg.innerHTML = '<span style="color:var(--warn);">已提交，等待卖家确认收款...</span>';
@@ -768,7 +829,7 @@ function showError(msg) {
             <div class="loading-state">
                 <div style="font-size:2.2rem;margin-bottom:0.8rem;">!</div>
                 <div style="color:var(--text);font-size:1rem;margin-bottom:0.5rem;">${escHtml(msg)}</div>
-                <a href="/" style="color:var(--accent);">返回首页</a>
+                <a href="/lookup" style="color:var(--accent);">前往订单查询</a>
             </div>
         </div>`;
 }

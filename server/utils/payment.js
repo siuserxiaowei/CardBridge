@@ -3,6 +3,38 @@
  * 包含支付宝和微信支付的接口封装
  */
 
+function getAppUrl() {
+    return process.env.APP_URL || 'http://localhost:3000';
+}
+
+function normalizePem(value) {
+    return value ? String(value).replace(/\\n/g, '\n') : value;
+}
+
+function createAlipaySdk() {
+    const AlipaySdk = require('alipay-sdk').default;
+
+    return new AlipaySdk({
+        appId: process.env.ALIPAY_APP_ID,
+        privateKey: normalizePem(process.env.ALIPAY_PRIVATE_KEY),
+        alipayPublicKey: normalizePem(process.env.ALIPAY_PUBLIC_KEY),
+        gateway: process.env.ALIPAY_GATEWAY || 'https://openapi.alipay.com/gateway.do'
+    });
+}
+
+function createWechatClient() {
+    const { Wechatpay } = require('wechatpay-node-v3');
+
+    return new Wechatpay({
+        appid: process.env.WECHAT_APPID,
+        mchid: process.env.WECHAT_MCHID,
+        publicKey: Buffer.from(normalizePem(process.env.WECHAT_PUBLIC_KEY || ''), 'utf8'),
+        privateKey: Buffer.from(normalizePem(process.env.WECHAT_PRIVATE_KEY || ''), 'utf8'),
+        serial_no: process.env.WECHAT_SERIAL_NO,
+        key: process.env.WECHAT_APIV3_KEY
+    });
+}
+
 // ============================================
 // 支付宝支付
 // ============================================
@@ -15,43 +47,34 @@
 async function createAlipayOrder(orderInfo) {
     try {
         // 检查是否配置了支付宝 SDK
-        if (!process.env.ALIPAY_APP_ID || process.env.ALIPAY_APP_ID === 'your_alipay_app_id') {
+        if (
+            !process.env.ALIPAY_APP_ID ||
+            process.env.ALIPAY_APP_ID === 'your_alipay_app_id' ||
+            !process.env.ALIPAY_PRIVATE_KEY ||
+            !process.env.ALIPAY_PUBLIC_KEY
+        ) {
             console.log('⚠️  支付宝未配置 SDK，使用手动收款模式');
             return {
                 manualMode: true,
-                qrImage: process.env.ALIPAY_PAY_QR || '/images/alipay-pay.svg',
+                qrImage: process.env.ALIPAY_PAY_QR || '/images/alipay-pay.jpg',
                 contactInfo: process.env.CONTACT_INFO || '',
                 message: '请使用支付宝扫码转账'
             };
         }
 
-        // 实际支付宝 SDK 调用（需要配置后才能使用）
-        const AlipaySdk = require('alipay-sdk').default;
-        const AlipayFormData = require('alipay-sdk/lib/form').default;
-
-        const alipaySdk = new AlipaySdk({
-            appId: process.env.ALIPAY_APP_ID,
-            privateKey: process.env.ALIPAY_PRIVATE_KEY,
-            alipayPublicKey: process.env.ALIPAY_PUBLIC_KEY,
-            gateway: process.env.ALIPAY_GATEWAY || 'https://openapi.alipay.com/gateway.do'
+        const alipaySdk = createAlipaySdk();
+        const result = await alipaySdk.pageExec('alipay.trade.page.pay', {
+            method: 'GET',
+            notify_url: `${getAppUrl()}/api/orders/alipay-callback`,
+            bizContent: {
+                out_trade_no: orderInfo.orderId,
+                product_code: 'FAST_INSTANT_TRADE_PAY',
+                total_amount: String(orderInfo.amount),
+                subject: orderInfo.subject,
+                body: orderInfo.description
+            },
+            returnUrl: `${getAppUrl()}/payment/${encodeURIComponent(orderInfo.orderId)}${orderInfo.accessToken ? `?t=${encodeURIComponent(orderInfo.accessToken)}` : ''}`
         });
-
-        const formData = new AlipayFormData();
-        formData.setMethod('get');
-        formData.addField('returnUrl', `${process.env.APP_URL}/order-success`);
-        formData.addField('bizContent', {
-            outTradeNo: orderInfo.orderId,
-            productCode: 'FAST_INSTANT_TRADE_PAY',
-            totalAmount: orderInfo.amount,
-            subject: orderInfo.subject,
-            body: orderInfo.description
-        });
-
-        const result = await alipaySdk.exec(
-            'alipay.trade.page.pay',
-            {},
-            { formData }
-        );
 
         return {
             isTestMode: false,
@@ -69,20 +92,15 @@ async function createAlipayOrder(orderInfo) {
  * @param {Object} params - 回调参数
  * @returns {Promise<boolean>} 验证结果
  */
-async function verifyAlipayCallback(params) {
+async function verifyAlipayCallback(params, raw = false) {
     try {
         // 测试模式直接返回成功
         if (!process.env.ALIPAY_APP_ID || process.env.ALIPAY_APP_ID === 'your_alipay_app_id') {
             return true;
         }
 
-        const AlipaySdk = require('alipay-sdk').default;
-        const alipaySdk = new AlipaySdk({
-            appId: process.env.ALIPAY_APP_ID,
-            alipayPublicKey: process.env.ALIPAY_PUBLIC_KEY
-        });
-
-        return alipaySdk.checkNotifySign(params);
+        const alipaySdk = createAlipaySdk();
+        return alipaySdk.checkNotifySign(params, raw);
     } catch (error) {
         console.error('验证支付宝回调失败:', error);
         return false;
@@ -101,33 +119,31 @@ async function verifyAlipayCallback(params) {
 async function createWechatOrder(orderInfo) {
     try {
         // 检查是否配置了微信支付 SDK
-        if (!process.env.WECHAT_MCHID || process.env.WECHAT_MCHID === 'your_merchant_id') {
+        if (
+            !process.env.WECHAT_APPID ||
+            !process.env.WECHAT_MCHID ||
+            process.env.WECHAT_MCHID === 'your_merchant_id' ||
+            !process.env.WECHAT_PUBLIC_KEY ||
+            !process.env.WECHAT_PRIVATE_KEY ||
+            !process.env.WECHAT_APIV3_KEY
+        ) {
             console.log('⚠️  微信支付未配置 SDK，使用手动收款模式');
             return {
                 manualMode: true,
-                qrImage: process.env.WECHAT_PAY_QR || '/images/wechat-pay.svg',
+                qrImage: process.env.WECHAT_PAY_QR || '/images/wechat-pay.jpg',
                 contactInfo: process.env.CONTACT_INFO || '',
                 message: '请使用微信扫码转账'
             };
         }
 
-        // 实际微信支付 SDK 调用（需要配置后才能使用）
-        const { Wechatpay } = require('wechatpay-node-v3');
-
-        const pay = new Wechatpay({
-            appid: process.env.WECHAT_APPID,
-            mchid: process.env.WECHAT_MCHID,
-            private_key: process.env.WECHAT_PRIVATE_KEY,
-            serial_no: process.env.WECHAT_SERIAL_NO,
-            apiv3_private_key: process.env.WECHAT_APIV3_KEY
-        });
+        const pay = createWechatClient();
 
         const result = await pay.v3.pay.transactions.native({
             appid: process.env.WECHAT_APPID,
             mchid: process.env.WECHAT_MCHID,
             description: orderInfo.subject,
             out_trade_no: orderInfo.orderId,
-            notify_url: `${process.env.APP_URL}/api/orders/wechat-callback`,
+            notify_url: `${getAppUrl()}/api/orders/wechat-callback`,
             amount: {
                 total: Math.round(orderInfo.amount * 100), // 转为分
                 currency: 'CNY'
@@ -153,27 +169,43 @@ async function createWechatOrder(orderInfo) {
 async function verifyWechatCallback(data) {
     try {
         // 测试模式直接返回成功
-        if (!process.env.WECHAT_MCHID || process.env.WECHAT_MCHID === 'your_merchant_id') {
+        if (
+            !process.env.WECHAT_APPID ||
+            !process.env.WECHAT_MCHID ||
+            process.env.WECHAT_MCHID === 'your_merchant_id' ||
+            !process.env.WECHAT_PUBLIC_KEY ||
+            !process.env.WECHAT_PRIVATE_KEY ||
+            !process.env.WECHAT_APIV3_KEY
+        ) {
             return true;
         }
 
-        const { Wechatpay } = require('wechatpay-node-v3');
-        const pay = new Wechatpay({
-            appid: process.env.WECHAT_APPID,
-            mchid: process.env.WECHAT_MCHID,
-            apiv3_private_key: process.env.WECHAT_APIV3_KEY
-        });
-
-        return pay.v3.verifySign(data);
+        const pay = createWechatClient();
+        return pay.verifySign(data);
     } catch (error) {
         console.error('验证微信支付回调失败:', error);
         return false;
     }
 }
 
+function decryptWechatCallback(resource) {
+    if (!resource) {
+        throw new Error('缺少微信支付回调资源');
+    }
+
+    const pay = createWechatClient();
+    return pay.decipher_gcm(
+        resource.ciphertext,
+        resource.associated_data,
+        resource.nonce,
+        process.env.WECHAT_APIV3_KEY
+    );
+}
+
 module.exports = {
     createAlipayOrder,
     verifyAlipayCallback,
     createWechatOrder,
-    verifyWechatCallback
+    verifyWechatCallback,
+    decryptWechatCallback
 };
