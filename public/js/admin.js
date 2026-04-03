@@ -3,12 +3,12 @@ const API_BASE = window.location.origin + '/api';
 // 初始化
 document.addEventListener('DOMContentLoaded', async () => {
     await checkAdminAuth();
+    setupEventListeners();
+    await populateCDKProductSelect();
     loadStats();
     loadProducts();
     loadOrders();
     loadCDKList();
-    populateCDKProductSelect();
-    setupEventListeners();
 });
 
 // 事件监听器
