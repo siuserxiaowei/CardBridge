@@ -304,20 +304,27 @@ async function getCardsForOrder(orderId, quantity, productId) {
 }
 
 async function processCardDelivery(order, cards, transactionId) {
-    await dbRun(`
+    // 幂等：只处理非 paid 状态的订单，用 WHERE 条件防止重复
+    const updateResult = await dbRun(`
         UPDATE orders
         SET payment_status = 'paid',
             card_id = ?,
             paid_at = CURRENT_TIMESTAMP,
             reservation_expires_at = NULL
-        WHERE id = ?
+        WHERE id = ? AND payment_status != 'paid'
     `, [cards[0].id, order.id]);
+
+    // 如果没有更新任何行，说明已经处理过了
+    if (!updateResult.changes) {
+        console.log(`⚠️  订单 ${order.id} 已处理过，跳过重复发货`);
+        return;
+    }
 
     for (const card of cards) {
         await dbRun(`
             UPDATE cards
             SET status = 'sold', order_id = ?, sold_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = ? AND status != 'sold'
         `, [order.id, card.id]);
     }
 

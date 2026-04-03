@@ -73,7 +73,10 @@ const { orderLimit, authLimit, apiLimit } = require('./middleware/rate-limit');
 // 挂载路由（含限流）
 app.use('/api/auth', authLimit, authRoutes);
 app.use('/api/products', apiLimit, productRoutes);
-app.use('/api/orders', orderLimit, orderRoutes);
+// 订单路由：只对下单接口限流，轮询和回调不限
+app.post('/api/orders/guest-create', orderLimit);
+app.post('/api/orders/create', orderLimit);
+app.use('/api/orders', orderRoutes);
 app.use('/api/admin', apiLimit, adminRoutes);
 
 // ============================================

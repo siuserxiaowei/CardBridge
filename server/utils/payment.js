@@ -94,9 +94,10 @@ async function createAlipayOrder(orderInfo) {
  */
 async function verifyAlipayCallback(params, raw = false) {
     try {
-        // 测试模式直接返回成功
+        // 手动收款模式：SDK 未配置时拒绝所有回调（不能返回 true）
         if (!process.env.ALIPAY_APP_ID || process.env.ALIPAY_APP_ID === 'your_alipay_app_id') {
-            return true;
+            console.log('⚠️  支付宝 SDK 未配置，拒绝回调请求');
+            return false;
         }
 
         const alipaySdk = createAlipaySdk();
@@ -168,7 +169,7 @@ async function createWechatOrder(orderInfo) {
  */
 async function verifyWechatCallback(data) {
     try {
-        // 测试模式直接返回成功
+        // 手动收款模式：SDK 未配置时拒绝所有回调（不能返回 true）
         if (
             !process.env.WECHAT_APPID ||
             !process.env.WECHAT_MCHID ||
@@ -177,7 +178,8 @@ async function verifyWechatCallback(data) {
             !process.env.WECHAT_PRIVATE_KEY ||
             !process.env.WECHAT_APIV3_KEY
         ) {
-            return true;
+            console.log('⚠️  微信支付 SDK 未配置，拒绝回调请求');
+            return false;
         }
 
         const pay = createWechatClient();

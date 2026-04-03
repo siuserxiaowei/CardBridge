@@ -72,7 +72,7 @@ async function releaseOrderReservation(orderId, nextStatus = 'cancelled', runner
 
     await runner.dbRun(
         `UPDATE orders
-         SET payment_status = ?, reservation_expires_at = NULL
+         SET payment_status = ?, reservation_expires_at = NULL, chatgpt_token = NULL
          WHERE id = ? AND payment_status != 'paid'`,
         [nextStatus, orderId]
     );
@@ -107,7 +107,7 @@ async function releaseExpiredReservations() {
 
         await runner.dbRun(
             `UPDATE orders
-             SET payment_status = 'expired', reservation_expires_at = NULL
+             SET payment_status = 'expired', reservation_expires_at = NULL, chatgpt_token = NULL
              WHERE id IN (${placeholders})
                AND payment_status IN ('pending', 'confirming')`,
             orderIds

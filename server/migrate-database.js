@@ -152,7 +152,13 @@ async function migrate() {
         'cards 表添加 used_at 字段'
     );
 
-    // 13. 同步已有订单的 sold_count（从历史订单反算）
+    // 13. cards 表：card_number 唯一索引（防止重复导入同一张 CDK）
+    await safeRun(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_cards_card_number ON cards(card_number)`,
+        '创建 cards.card_number 唯一索引'
+    );
+
+    // 14. 同步已有订单的 sold_count（从历史订单反算）
     await safeRun(`
         UPDATE products
         SET sold_count = (
