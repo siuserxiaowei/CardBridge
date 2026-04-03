@@ -68,12 +68,13 @@ const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const adminRoutes = require('./routes/admin');
+const { orderLimit, authLimit, apiLimit } = require('./middleware/rate-limit');
 
-// 挂载路由
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/admin', adminRoutes);
+// 挂载路由（含限流）
+app.use('/api/auth', authLimit, authRoutes);
+app.use('/api/products', apiLimit, productRoutes);
+app.use('/api/orders', orderLimit, orderRoutes);
+app.use('/api/admin', apiLimit, adminRoutes);
 
 // ============================================
 // 首页路由
