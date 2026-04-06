@@ -731,10 +731,12 @@ function startTimer() {
 }
 
 function startPolling() {
+    let pollErrors = 0;
     pollInterval = setInterval(async () => {
         try {
             const res = await fetch(buildApiUrl(`/orders/status/${encodeURIComponent(orderNo)}`));
-            if (!res.ok) return;
+            if (!res.ok) { pollErrors++; if (pollErrors > 10) stopTimers(); return; }
+            pollErrors = 0;
             const data = await res.json();
             if (data.status === 'paid') {
                 stopTimers();
@@ -756,7 +758,14 @@ function startPolling() {
                 if (msg) msg.innerHTML = '<span style="color:var(--danger);">订单已取消</span>';
                 stopTimers();
             }
-        } catch (e) {}
+        } catch (e) {
+            pollErrors++;
+            if (pollErrors > 10) {
+                stopTimers();
+                const msg = document.getElementById('statusMsg');
+                if (msg) msg.innerHTML = '<span style="color:var(--danger);">网络连接异常，请刷新页面重试</span>';
+            }
+        }
     }, 3000);
 }
 

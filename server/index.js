@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const bodyParser = require('body-parser');
 const path = require('path');
 require('dotenv').config();
@@ -36,28 +37,56 @@ app.use(cors({
         if (process.env.NODE_ENV !== 'production') return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error('CORS origin not allowed'));
-    }
+    },
+    maxAge: 86400 // 预检请求缓存 24 小时
 }));
 
+// Gzip/Brotli 压缩（Cloudflare 也会压缩，双重保险）
+app.use(compression());
+
+// 安全头
 app.use((req, res, next) => {
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
     if (process.env.NODE_ENV === 'production') {
-        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     }
     next();
 });
 
 // 解析 JSON 请求体
-app.use(bodyParser.json({ verify: captureRawBody }));
-app.use(bodyParser.urlencoded({ extended: true, verify: captureRawBody }));
+app.use(bodyParser.json({ verify: captureRawBody, limit: '1mb' }));
+app.use(bodyParser.urlencoded({ extended: true, verify: captureRawBody, limit: '1mb' }));
 
-// 静态文件服务（前端页面）
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// 静态文件服务（前端页面）—— 设置缓存头让 Cloudflare 缓存
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+    maxAge: '7d',           // 静态资源缓存 7 天
+    etag: true,             // 启用 ETag
+    lastModified: true,     // 启用 Last-Modified
+    setHeaders(res, filePath) {
+        // 图片和字体缓存更久
+        if (/\.(jpg|jpeg|png|gif|svg|ico|woff2?|ttf|eot)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=2592000, immutable'); // 30 天
+        }
+        // CSS/JS 缓存 7 天
+        else if (/\.(css|js)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 天
+        }
+        // HTML 不缓存太久（内容可能变）
+        else if (/\.html$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=300'); // 5 分钟
+        }
+    }
+}));
 
-// 请求日志
+// 请求日志（生产环境只记录非静态资源请求，减少噪音）
 app.use((req, res, next) => {
+    if (process.env.NODE_ENV === 'production' && /\.(js|css|jpg|png|svg|ico|woff2?)$/i.test(req.path)) {
+        return next();
+    }
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
 });
@@ -83,8 +112,9 @@ app.post('/api/orders/create', orderLimit);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', apiLimit, adminRoutes);
 
-// 公开配置（前端统计等）
+// 公开配置（前端统计等）—— 配置很少变，缓存 10 分钟
 app.get('/api/config/public', (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=600');
     res.json({
         analytics51laId: process.env.ANALYTICS_51LA_ID || '',
         shopName: process.env.SHOP_NAME || '数字商店'
@@ -116,6 +146,7 @@ app.get('/sitemap.xml', async (req, res) => {
         xml += `</urlset>`;
 
         res.header('Content-Type', 'application/xml');
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // sitemap 缓存 1 小时
         res.send(xml);
     } catch (e) {
         res.status(500).send('');

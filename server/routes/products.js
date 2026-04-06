@@ -42,6 +42,7 @@ router.get('/', async (req, res) => {
             }
         }
 
+        res.setHeader('Cache-Control', 'public, s-maxage=30, max-age=10'); // CDN 缓存 30s，浏览器 10s
         res.json(products);
     } catch (error) {
         console.error('获取商品列表错误:', error);
@@ -88,6 +89,7 @@ router.get('/:id', async (req, res) => {
         );
         product.tiers = tiers;
 
+        res.setHeader('Cache-Control', 'public, s-maxage=30, max-age=10');
         res.json(product);
     } catch (error) {
         console.error('获取商品详情错误:', error);

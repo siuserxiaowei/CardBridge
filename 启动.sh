@@ -31,6 +31,10 @@ if [ ! -d "database" ]; then
     echo ""
 fi
 
+echo "🧱 正在执行数据库迁移..."
+npm run migrate-db
+echo ""
+
 # 启动服务器
 echo "🎉 准备启动服务器..."
 echo ""
@@ -39,9 +43,8 @@ echo "访问地址："
 echo "  前台: http://localhost:3000"
 echo "  后台: http://localhost:3000/admin"
 echo ""
-echo "默认管理员账号："
-echo "  邮箱: admin@example.com"
-echo "  密码: admin123456"
+echo "管理员账号请查看 .env 文件中的配置"
+echo "  首次登录后请立即修改默认密码"
 echo "================================"
 echo ""
 echo "按 Ctrl+C 可停止服务器"

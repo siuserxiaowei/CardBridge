@@ -11,10 +11,16 @@ services:
     volumes:
       - ./database:/app/database
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/products"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
+      start_period: 15s
       retries: 3
 
   cloudflared:
@@ -24,5 +30,11 @@ services:
     environment:
       TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
     depends_on:
-      - digital-shop
+      digital-shop:
+        condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
