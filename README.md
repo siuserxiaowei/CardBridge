@@ -1,5 +1,18 @@
 # 数字商店 - 自动发卡 & ChatGPT Plus 代充值平台
 
+<!-- SIUSER-SEO-INTRO:START -->
+
+## 项目介绍 / Project Introduction
+
+**中文介绍**：卡片桥接工具项目，用于连接内容、图片卡片、知识素材和多平台发布流程。
+
+**English**: A card-bridge tool for connecting content, visual cards, knowledge assets, and multi-platform publishing workflows.
+
+**SEO 关键词 / SEO Keywords**: content cards, publishing workflow, visual content, automation, 知识卡片
+
+<!-- SIUSER-SEO-INTRO:END -->
+
+
 > 会话交接入口：优先阅读 [下次开始先读这里-最高优先级.md](./下次开始先读这里-最高优先级.md)
 
 一个完整的数字商品交易平台，支持邮件发卡和 ChatGPT Plus 自动充值两种模式。
@@ -162,3 +175,17 @@ MIT License
 ## 技术支持
 
 如有问题，请提交 Issue 或联系开发者。
+
+<!-- SIUSER-CONTACT:START -->
+
+## 联系我 / Contact
+
+想交流 AI 工具、内容自动化、SEO、私域增长或项目合作，可以扫码加我微信。
+
+For collaboration on AI tools, content automation, SEO, private-domain growth, or product experiments, scan the WeChat QR code below.
+
+<img src="https://raw.githubusercontent.com/siuserxiaowei/siuserxiaowei/main/assets/contact/wechat-qrcode.jpg" width="180" alt="WeChat QR code / 微信二维码" />
+
+**关键词 / Keywords**: content cards, publishing workflow, visual content, automation, AI tools, AI automation, GitHub Pages, SEO
+
+<!-- SIUSER-CONTACT:END -->
