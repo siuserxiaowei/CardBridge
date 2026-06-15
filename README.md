@@ -1,5 +1,72 @@
 # 数字商店 - 自动发卡 & ChatGPT Plus 代充值平台
 
+<!-- SIUSER-REPO-GUIDE:START -->
+## Repository Guide
+
+### What This Repository Does
+
+卡片桥接工具：连接内容卡片、发布流程和视觉内容生产。
+
+English summary: CardBridge connects content cards, publishing workflows, and visual content production.
+
+### Online Entry Points
+
+- GitHub repository: https://github.com/siuserxiaowei/CardBridge
+- Live / GitHub Pages: not configured for this repository
+- Default branch: `main`
+- Primary language: `JavaScript`
+
+### How To Read / Learn This Repository
+
+1. 先读本 README，确认项目目标、在线入口和本地运行方式。
+2. 查看 `package.json` 的 scripts，确认开发、构建和预览命令。
+3. 如果要修改内容，先小范围改动，再运行本 README 中的验证命令。
+
+### Clone This Repository
+
+```bash
+git clone https://github.com/siuserxiaowei/CardBridge.git
+cd CardBridge
+```
+
+### Run Or View Locally
+
+```bash
+npm install
+npm run dev
+```
+
+### Repository Map
+
+| Path | Purpose |
+| --- | --- |
+| `README.md` | 项目入口说明，先读这里。 |
+| `package.json` | Node/前端项目配置和常用脚本。 |
+| `public/` | 公开静态资源。 |
+| `docs/` | 文档或 GitHub Pages 输出目录。 |
+| `Dockerfile` | 项目文件。 |
+| `TODO.md` | 项目文件。 |
+| `content/` | 项目目录。 |
+| `deploy.sh` | 项目文件。 |
+| `docker-compose.yml` | 项目文件。 |
+| `drafts/` | 项目目录。 |
+| `package-lock.json` | 项目文件。 |
+| `render.yaml` | 项目文件。 |
+
+### Maintenance Notes
+
+- Keep this README in sync when the project purpose, live link, or run commands change.
+- Prefer small, focused commits when changing code, data, or generated pages.
+- Run the relevant build or validation command before publishing changes.
+- If this is a generated/static archive, update the source data first, then regenerate the public files.
+
+### Privacy And Safety
+
+- Do not commit API keys, tokens, passwords, cookies, private URLs, or internal account data.
+- Keep private source material out of public GitHub Pages output unless it has been explicitly cleared for publication.
+- When in doubt, run a quick secret scan such as `rg -n "token|secret|password|access_key|authorization"` before pushing.
+<!-- SIUSER-REPO-GUIDE:END -->
+
 <!-- SIUSER-SEO-INTRO:START -->
 
 ## 项目介绍 / Project Introduction
@@ -11,7 +78,6 @@
 **SEO 关键词 / SEO Keywords**: content cards, publishing workflow, visual content, automation, 知识卡片
 
 <!-- SIUSER-SEO-INTRO:END -->
-
 
 > 会话交接入口：优先阅读 [下次开始先读这里-最高优先级.md](./下次开始先读这里-最高优先级.md)
 
